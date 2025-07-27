@@ -1,0 +1,24 @@
+[project]
+name = "batnav"
+version = "0.1.0"
+description = "Binaural tracking model inspired by bat echolocation using SCAT"
+dependencies = [
+    "numpy",
+    "scipy",
+    "pyyaml",
+    "pydantic",
+    "polars",
+    "matplotlib",
+    "plotly",
+    "fastapi",
+    "uvicorn"
+]
+
+[tool.ruff]
+line-length = 88
+extend-select = ["I", "N", "UP"]
+exclude = ["tests", "data", ".venv"]
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true
