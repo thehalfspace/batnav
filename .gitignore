@@ -1,0 +1,29 @@
+# .gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Virtual environment
+.venv/
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Data
+*.log
+*.csv
+*.json
+*.mat
+data/outputs/
+
