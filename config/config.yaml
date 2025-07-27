@@ -1,0 +1,75 @@
+# Wave Parameters (Non-editable)
+wave:
+  sample_rate: 100000  # Hz
+  sound_speed: 343.0   # m/s
+  wavelength: 0.00343  # m (derived from sound_speed/sample_rate)
+
+# Binaural Parameters (Non-editable)
+binaural:
+  ear_separation: 0.014  # meters (14mm)
+  head_width: 0.014     # meters
+  max_turn_rate: 45.0   # degrees per second
+  min_turn_rate: 5.0    # degrees per second
+  update_rate: 100      # Hz
+  max_iterations: 1000
+  convergence_threshold: 0.01  # meters
+  file_normalize: 0
+  file_normlevel: 80
+  file_timeseries: 1
+  file_specgram: 1
+  file_wignerville: 0
+  coch_panel: 'coch_gammatone'
+  coch_ord: 4
+  coch_ripple: 6
+  coch_bw: 4000
+  coch_fmin: 20000
+  coch_fmax: 100000
+  coch_steps: 81
+  coch_fcenter: 1
+  coch_mode: 0
+  coch_tfplot: 1
+  coch_grpdelay: 1
+  coch_bmmplot: 1
+  neur_panel: 'neur_rcf'
+  neur_probplot: 0
+  neur_isihist: 0
+  neur_rasterplot: 0
+  neur_rcf_rect: 1
+  neur_rcf_comp: 2
+  neur_rcf_filt: 1
+  neur_rcf_spike: 1
+  neur_rcf_ord: 1
+  neur_rcf_fc: 8000
+  neur_rcf_thrlev: '0'
+  neur_rcf_refaper: 100
+  neur_rcf_refrper: 10
+  neur_rcf_reffcn: 3
+  neur_rcf_freqresp: 0
+
+  # 3x8 matrix
+  neur_biol_parm: 
+    - [6, 20, 2500, 4000, 10.05, 1500, 6580, 66.31]
+    - [2, 5, 300, 2000, 11.11, 1250, 16667, 250]
+    - [2, 2, 200, 500, 1.05, 3500, 6580, 66.31]
+
+  neur_biol_absper: 0.7500
+  neur_biol_relper: 0.8000
+  neur_biol_cr: 0.5500
+  neur_biol_plotstates: 0
+  neur_rand_mode: 2
+  neur_rand_rate: 100
+  neur_rand_amod: 200
+  neur_rand_rper: '0'
+  neur_rand_fanout: 100
+  neur_rand_seed: '0'
+  cn_ntot: 4
+  cn_nsyn: 60
+  cn_nrec: 4
+  cn_wrec: 1
+  cn_lifparams:
+    - [-54, -70, -80, 10, 5, 5, 5, 15, 5, 5]
+  cn_plottran: 0
+  cn_autocorr: 0
+  cn_plotvmem: 0
+  cn_isihist: 0
+  cn_rasterplot: 0
