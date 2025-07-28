@@ -1,8 +1,12 @@
 # main.py
 from config_loader import load_config, load_scenarios
 from model.bat import Bat
+from model.target import Target
 from model.signal_generator import generate_sigs_with_delay, generate_multiglints
 #import model.signal_generator as bsig
+from model.wave_params import WaveParams
+from model.utils import *
+from model.echo_analyzer import linear_separate_window_10thresholds
 
 
 # Reload modules for debugging: Can drop later
@@ -10,7 +14,7 @@ import importlib
 #importlib.reload(generate_sigs_with_delay)
 #importlib.reload(generate_multiglints)
 
-def main():
+def testing():
     # Load configuration
     config = load_config()
     print("🔧 Config loaded.")
@@ -39,12 +43,39 @@ def main():
     # Multi-glint echo
     multi = generate_multiglints(2.0, 100)
     print("Multiglints: ", multi["data"])
+
+    # Load wave parameters
+    wavParams = WaveParams()
+    print("Fs: ", wavParams.Fs)
+
+    # Helper functions
+    print("Testing helper functions:")
+    bat_pos = np.array([0.0,0.0])
+    available = [i for i in range(len(targets))]
+
+    nearest = find_nearest_target(targets, bat_pos, available)
+    print("Closest target:", targets[nearest])
+
+    # Echo Analyzer
     breakpoint()
 
-    # 
+
 
     # TODO: Initialize Bat and begin tracking loop
     print("\n🚧 TODO: Begin bat tracking loop here...")
+
+
+def main():
+    # Load config and scenarios
+    config = load_config()
+    targets = load_scenarios()
+
+    # Get wave parameters
+    wav_params = WaveParams(
+            sample_rate=config.wave.sample_rate,
+            call_len=config.wave.call_len,
+            ear_sep=config.binaural.ear_separation,
+            threshold_id=5)
 
 if __name__ == "__main__":
     main()

@@ -5,6 +5,7 @@ from typing import List
 import yaml
 import polars as pl
 from pydantic import BaseModel, Field
+from model.target import Target
 
 CONFIG_PATH = Path("config/config.yaml")
 SCENARIO_PATH = Path("config/Scenario1.csv")
@@ -88,12 +89,12 @@ class Config(BaseModel):
 
 # ---------- Target Scenario ----------
 
-class Target(BaseModel):
-    index: int
-    r: float
-    theta: float
-    NoG: int    # number of glints
-    tin: float  # glint spacing (µs)
+#class Target(BaseModel):
+#    index: int
+#    r: float
+#    theta: float
+#    NoG: int    # number of glints
+#    tin: float  # glint spacing (µs)
 
 
 # ---------- Loaders ----------
