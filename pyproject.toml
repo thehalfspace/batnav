@@ -12,7 +12,8 @@ dependencies = [
     "plotly",
     "fastapi",
     "uvicorn",
-    "ipython"
+    "ipython",
+    "brian2hears"
 ]
 
 [tool.ruff]

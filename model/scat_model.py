@@ -1,56 +1,57 @@
 # model/scat_model.py
 
 import numpy as np
-from scipy.signal import firwin, lfilter
+from brian2 import Hz
+from brian2hears import Sound, Gammatone
 from typing import Dict
 
 
 def run_biscat_main(config, ts: Dict) -> Dict:
     """
-    Simulate cochlear filterbank output from SCAT pipeline.
+    Cochlear filterbank simulation using brian2hears Gammatone filters.
 
     Args:
-        config: loaded config object
+        config: parsed config object
         ts (dict): {'data': np.ndarray, 'fs': int}
 
     Returns:
-        dict: { 'coch': { 'bmm': np.ndarray, 'Fc': np.ndarray } }
+        dict with:
+            'bmm': basilar membrane motion [time x channel]
+            'Fc': center frequencies (Hz)
     """
     x = ts["data"]
     fs = ts["fs"]
 
-    # If stereo, take mono
-    if x.ndim == 2 and x.shape[1] == 2:
-        x = np.mean(x, axis=1)
+    # Ensure mono input
+    if x.ndim == 2:
+        x = x.mean(axis=1)
 
-    # --- Filterbank config (override here or use config.binaural.*)
-    fmin = 20000
-    fmax = 100000
-    n_filters = 81
-    filter_order = 256
+    # Wrap in Sound object
+    sound = Sound(x, samplerate=fs * Hz)
 
-    # Center frequencies (log spaced for auditory realism)
-    Fc = np.logspace(np.log10(fmin), np.log10(fmax), n_filters)
+    # Center frequencies (log-spaced or linear based on config)
+    fmin = config.binaural.coch_fmin
+    fmax = config.binaural.coch_fmax
+    n_filters = config.binaural.coch_steps
+    spacing_mode = config.binaural.coch_fcenter
 
-    # Allocate output: rows = time, cols = filters
-    bmm = np.zeros((len(x), n_filters))
+    if spacing_mode == 1:  # linear
+        Fc = np.linspace(fmin, fmax, n_filters)
+    else:  # log spacing (default)
+        Fc = np.logspace(np.log10(fmin), np.log10(fmax), n_filters)
 
-    for i, fc in enumerate(Fc):
-        # Bandwidth heuristic
-        bw = fc / 5
-        low = max(10.0, fc - bw / 2)
-        high = min(fs / 2 - 1, fc + bw / 2)
+    # Create gammatone filterbank
+    gfb = Gammatone(sound, cf=Fc * Hz)  # cf = center_frequencies
 
-        # Normalize to Nyquist
-        taps = firwin(filter_order + 1, [low, high], pass_zero=False, fs=fs)
-        filtered = lfilter(taps, 1.0, x)
-
-        bmm[:, i] = filtered
+    # Run processing
+    bmm = gfb.process()
+    bmm_np = np.asarray(bmm)  # shape: [time, channel]
 
     return {
         "coch": {
-            "bmm": bmm,
-            "Fc": Fc
+            "bmm": bmm_np,
+            "Fc": Fc,
+            "gfb": gfb,
         }
     }
 

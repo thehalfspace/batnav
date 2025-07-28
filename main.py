@@ -7,7 +7,9 @@ from model.wave_params import WaveParams
 from model.utils import *
 from model.echo_analyzer import linear_separate_window_10thresholds, estimate_glint_spacing
 from model.scat_model import run_biscat_main
-# from model.scat_model import run_biscat_main
+from plotting.cochleagram import plot_bmm
+from plotting.filterbank import plot_gammatone_filterbank #, plot_brian2hears_sos_filterbank
+from plotting.trajectory import animate_bat_trajectory
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,8 +18,6 @@ import matplotlib.pyplot as plt
 import importlib
 #importlib.reload(generate_sigs_with_delay)
 #importlib.reload(generate_multiglints)
-# main.py
-
 
 def run_binaural_tracking():
     # Load config and scenario
@@ -35,16 +35,19 @@ def run_binaural_tracking():
     visited_targets = []
     excluded = set()
     glint_estimates = []
+    tarvec = []
     vec_all = []
     coordear_all = []
 
-    for step in range(max_steps):
+    for step in range(15): #max_steps):
         print(f"\n🚩 Step {step+1}")
 
         available = [t.index for t in targets if t.index not in excluded]
         if not available:
             print("No targets left. Exiting.")
             break
+
+        print("Available targets: ", available)
 
         # --- Find nearest target
         nearest_idx = find_nearest_target(targets, bat.position, available)
@@ -64,9 +67,13 @@ def run_binaural_tracking():
         simL = run_biscat_main(config, tsL)
         simR = run_biscat_main(config, tsR)
 
+        # plot_bmm(simL["coch"]["bmm"], simL["coch"]["Fc"], sample_rate, title=f"BMM (Basilar Membrane Motion) for Target {target.index} (Left Ear)")
+        # plot_brian2hears_sos_filterbank(simL["coch"]["gfb"], fs=sample_rate)
+
+
+
         print(f"🧪 BMM shape L: {simL['coch']['bmm'].shape}")
         print(f"🧪 Fc range: {simL['coch']['Fc'][0]:.1f} - {simL['coch']['Fc'][-1]:.1f} Hz")
-        breakpoint()
 
         # --- Linear 10-threshold detection
         wave_params.simStruct = simL
@@ -97,6 +104,7 @@ def run_binaural_tracking():
             continue
 
         glint_estimates.append(glint_spacing)
+        #tarvec.append(target.index)
         print(f"📏 Glint spacing = {glint_spacing:.1f} µs")
 
         if abs(glint_spacing - desired_spacing_us) <= tolerance_us:
@@ -106,11 +114,26 @@ def run_binaural_tracking():
             print(f"❌ Target {target.index} spacing off by {abs(glint_spacing - desired_spacing_us):.1f} µs.")
             excluded.add(target.index)
 
+    # --- Bundle data for animation ---
+    trajectory_data = {
+            "position": bat.path_history,
+            "heading": vec_all,
+            "ears": coordear_all,
+            "angles": bat.angle_history,
+            "visited": visited_targets,
+            "glint_spacing": glint_estimates,
+            }
+
     print("\n📍 Final position:", bat.position)
     print("🧭 Headings:", vec_all[-1])
     print("🦇 Ears:", coordear_all[-1])
     print("📊 Glint estimates (µs):", glint_estimates)
     print("🎯 Path: ", visited_targets)
+
+    return trajectory_data
+
+    # Plot trajectory
+    animate_bat_trajectory(trajectory_data)
 
 
 def main():
@@ -118,56 +141,6 @@ def main():
 
 
 if __name__ == "__main__":
-    debug_test_components()
+    td = run_binaural_tracking()
     #main()
-
-def debug_test_components():
-    # Load configuration
-    config = load_config()
-    print("🔧 Config loaded.")
-    print(f"  Sample rate: {config.wave.sample_rate} Hz")
-    print(f"  Ear separation: {config.binaural.ear_separation} m")
-
-    # Load target scenario
-    targets = load_scenarios()
-    print(f"🎯 Loaded {len(targets)} targets.")
-    for t in targets[:3]:  # Preview first 3
-        print(f"  - Target {t.index}: r={t.r} m, θ={t.theta}°, glint={t.tin} µs")
-    
-    # Initialize bat
-    bat = Bat()
-    print("Initial ears:", bat.get_ear_positions())
-    print("Checking bat position:", bat.position)
-    bat.rotate_head(15)
-    bat.move_forward()
-    print("Moved to:", bat.position)
-
-    # Test signal_generator
-    # Binaural signal with delay (L,R) = (2.5 m, 2.0 m)
-    sig = generate_sigs_with_delay([2.5, 2.0])
-    print("Stereo output:", sig["data"])
-
-    # Multi-glint echo
-    multi = generate_multiglints(2.0, 100)
-    print("Multiglints: ", multi["data"])
-
-    # Load wave parameters
-    wavParams = WaveParams()
-    print("Fs: ", wavParams.Fs)
-
-    # Helper functions
-    print("Testing helper functions:")
-    bat_pos = np.array([0.0,0.0])
-    available = [i for i in range(len(targets))]
-
-    nearest = find_nearest_target(targets, bat_pos, available)
-    print("Closest target:", targets[nearest])
-
-    # Echo Analyzer
-    breakpoint()
-
-
-
-    # TODO: Initialize Bat and begin tracking loop
-    print("\n🚧 TODO: Begin bat tracking loop here...")
 
