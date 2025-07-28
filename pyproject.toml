@@ -11,7 +11,8 @@ dependencies = [
     "matplotlib",
     "plotly",
     "fastapi",
-    "uvicorn"
+    "uvicorn",
+    "ipython"
 ]
 
 [tool.ruff]

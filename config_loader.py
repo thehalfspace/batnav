@@ -92,8 +92,8 @@ class Target(BaseModel):
     index: int
     r: float
     theta: float
-    tin: float  # glint spacing (µs)
     NoG: int    # number of glints
+    tin: float  # glint spacing (µs)
 
 
 # ---------- Loaders ----------
@@ -106,5 +106,7 @@ def load_config(path: Path = CONFIG_PATH) -> Config:
 
 def load_scenarios(path: Path = SCENARIO_PATH) -> List[Target]:
     df = pl.read_csv(path)
-    return [Target(**row) for row in df.to_dicts()]
 
+    # Clean column names
+    df.columns = [col.strip() for col in df.columns]
+    return [Target(**row) for row in df.to_dicts()]
