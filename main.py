@@ -1,6 +1,14 @@
 # main.py
 from config_loader import load_config, load_scenarios
 from model.bat import Bat
+from model.signal_generator import generate_sigs_with_delay, generate_multiglints
+#import model.signal_generator as bsig
+
+
+# Reload modules for debugging: Can drop later
+import importlib
+#importlib.reload(generate_sigs_with_delay)
+#importlib.reload(generate_multiglints)
 
 def main():
     # Load configuration
@@ -22,6 +30,18 @@ def main():
     bat.rotate_head(15)
     bat.move_forward()
     print("Moved to:", bat.position)
+
+    # Test signal_generator
+    # Binaural signal with delay (L,R) = (2.5 m, 2.0 m)
+    sig = generate_sigs_with_delay([2.5, 2.0])
+    print("Stereo output:", sig["data"])
+
+    # Multi-glint echo
+    multi = generate_multiglints(2.0, 100)
+    print("Multiglints: ", multi["data"])
+    breakpoint()
+
+    # 
 
     # TODO: Initialize Bat and begin tracking loop
     print("\n🚧 TODO: Begin bat tracking loop here...")
