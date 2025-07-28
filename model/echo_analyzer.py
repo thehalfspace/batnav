@@ -1,67 +1,74 @@
 import numpy as np
-from scipy.signal import firwin, lfilter
-from dataclasses import dataclass
-from typing import List, Tuple
+from model.signal_generator import generate_multiglints
+from model.utils import polar_to_cartesian, euclidean_distance
+from model.scat_model import run_biscat_main  # stub assumed
+from typing import Optional
 
-@dataclass
-class EchoAnalysisResult:
-    sd: np.ndarray  # shape (NoT, num_freq)
-    sgl: np.ndarray  # shape (NoT, num_freq)
-    traces_echo: np.ndarray  # binary detection traces, shape (num_samples, num_freq)
 
-def lowpass_filter(signal: np.ndarray, fs: float, cutoff: float = 10000.0, order: int = 30) -> np.ndarray:
+def estimate_glint_spacing(
+    bat,
+    target,
+    config,
+    wave_params,
+    num_thresholds: int = 10
+) -> Optional[float]:
     """
-    Apply FIR low-pass filter to a multi-column signal (samples x freq bins)
+    Estimate glint spacing in microseconds by analyzing spectral notches.
+    
+    Args:
+        bat (Bat): the current bat object
+        target (Target): target object
+        config: SCAT config object
+        wave_params (WaveParams): wave parameter dataclass
+        num_thresholds (int): number of threshold levels (default 10)
+    
+    Returns:
+        float or None: estimated spacing in microseconds
     """
-    nyq = 0.5 * fs
-    norm_cutoff = cutoff / nyq
-    b = firwin(order + 1, norm_cutoff)
-    return lfilter(b, 1.0, signal, axis=0)
+    # 1. Distance from bat to target
+    target_pos = polar_to_cartesian(target.r, target.theta)
+    dist_to_target = euclidean_distance(bat.position, target_pos)
 
-def amp_lat_trading(trace: np.ndarray, threshold: float, twi: int) -> int:
-    """
-    Locate the most plausible echo position based on amplitude-latency trading.
-    Returns the sample index within the window `twi`.
-    """
-    segment = trace[:twi]
-    above_thresh = segment >= threshold
-    if not np.any(above_thresh):
-        return -1
-    return np.argmax(above_thresh)
+    # 2. Generate signal with multiple glints
+    ts = generate_multiglints(dist_to_target, target.tin)  # tin in µs
 
-def linear_separate_window_10thresholds(wav_param) -> EchoAnalysisResult:
-    sm_wf = wav_param.simStruct['sm_wf']
-    NoT = wav_param.NoT
-    Fs = wav_param.Fs
-    twi = wav_param.callLenForMostFreq
-    threshold_vector = wav_param.threshold_vector
+    # 3. Run SCAT model
+    sim_struct = run_biscat_main(config, ts)
 
-    num_samples, num_freq = sm_wf.shape
-    traces_echo = np.zeros_like(sm_wf)
+    # 4. Run echo analyzer for each threshold
+    Fc = sim_struct['coch']['Fc']
+    n_freqs = len(Fc)
+    gap_matrix = np.zeros((n_freqs, num_thresholds))
 
-    # Step 1: Low-pass filter
-    sm_wf_filtered = lowpass_filter(sm_wf, Fs)
+    for t in range(num_thresholds):
+        wave_params.simStruct = sim_struct
+        wave_params.NoT = t + 1
+        _, first_gap = linear_separate_window_10thresholds(wave_params)
+        gap_matrix[:, t] = first_gap
 
-    # Step 2: Normalize and threshold
-    sd = np.full((NoT, num_freq), -1, dtype=float)  # delay indices
-    sgl = np.full((NoT, num_freq), -1, dtype=float)  # echo start indices
+    # 5. Use first column with valid data (or default to column 0)
+    valid_cols = np.where(~np.isnan(gap_matrix).all(axis=0))[0]
+    if len(valid_cols) == 0:
+        return None
 
-    for j in range(num_freq):
-        trace = sm_wf_filtered[:, j]
-        norm_trace = (trace - np.min(trace)) / (np.max(trace) - np.min(trace) + 1e-12)
+    from model.glint_detector import findnotches2  # placeholder location
+    notches = findnotches2(gap_matrix, valid_cols[0])  # returns indices of notches
 
-        for k in range(NoT):
-            threshold = threshold_vector[k]
-            idx = amp_lat_trading(norm_trace, threshold, twi)
-            if idx >= 0:
-                sgl[k, j] = idx
-                traces_echo[idx:, j] = 1
+    if notches is None or len(notches) < 2:
+        return None
 
-                # Find the next rising edge past `idx` with similar amplitude
-                echo_window = norm_trace[idx:]
-                echo_candidates = np.where(echo_window >= threshold)[0]
-                if len(echo_candidates) > 0:
-                    sd[k, j] = idx + echo_candidates[0]
+    # 6. Compute frequency spacing
+    notch_freqs = Fc[notches]  # in Hz
+    deltas = np.diff(np.sort(notch_freqs))  # in Hz
+    if len(deltas) == 0:
+        return None
 
-    return EchoAnalysisResult(sd=sd, sgl=sgl, traces_echo=traces_echo)
+    # 7. Histogram to find dominant spacing
+    hist, edges = np.histogram(deltas, bins=30)
+    peak_bin = np.argmax(hist)
+    spacing_Hz = (edges[peak_bin] + edges[peak_bin + 1]) / 2
+
+    # 8. Glint spacing = 1 / frequency spacing (Hz → µs)
+    glint_spacing_us = 1 / spacing_Hz * 1e6
+    return glint_spacing_us
 

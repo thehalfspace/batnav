@@ -86,17 +86,6 @@ class Config(BaseModel):
     wave: WaveConfig
     binaural: BinauralConfig
 
-
-# ---------- Target Scenario ----------
-
-#class Target(BaseModel):
-#    index: int
-#    r: float
-#    theta: float
-#    NoG: int    # number of glints
-#    tin: float  # glint spacing (µs)
-
-
 # ---------- Loaders ----------
 
 def load_config(path: Path = CONFIG_PATH) -> Config:

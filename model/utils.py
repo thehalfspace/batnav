@@ -3,77 +3,114 @@
 import numpy as np
 from typing import List
 from model.target import Target
+from model.bat import Bat
+
+
+def polar_to_cartesian(r: float, theta_deg: float) -> np.ndarray:
+    """
+    Convert polar coordinates to 2D Cartesian coordinates.
+    Args:
+        r (float): radial distance in meters
+        theta_deg (float): angle in degrees (0 = up, increasing counterclockwise)
+    Returns:
+        np.ndarray: Cartesian coordinates [x, y]
+    """
+    theta_rad = np.radians(theta_deg + 90)  # +90 so 0° points upward
+    return np.array([r * np.cos(theta_rad), r * np.sin(theta_rad)])
 
 
 def euclidean_distance(a: np.ndarray, b: np.ndarray) -> float:
     """
-    Return the Euclidean distance between two 2D points.
+    Compute Euclidean distance between two 2D points.
     """
-    return np.linalg.norm(np.array(a) - np.array(b))
+    return np.linalg.norm(np.asarray(a) - np.asarray(b))
 
 
-def distances_to_targets(points: np.ndarray, reference: np.ndarray) -> np.ndarray:
+def batch_euclidean_distances(points: np.ndarray, ref: np.ndarray) -> np.ndarray:
     """
-    Vectorized computation of distances from multiple 2D points to a reference point.
-    
-    Args:
-        points (np.ndarray): shape (N, 2)
-        reference (np.ndarray): shape (2,)
-    
-    Returns:
-        np.ndarray: distances of shape (N,)
+    Vectorized distance from each row in `points` to `ref`.
     """
-    diff = points - reference
-    return np.linalg.norm(diff, axis=1)
+    return np.linalg.norm(points - ref, axis=1)
 
 
 def angle_between_vectors(u: np.ndarray, v: np.ndarray) -> float:
     """
-    Compute signed angle (in degrees) from vector v to vector u.
-    Positive = left turn, Negative = right turn.
-
-    Args:
-        u (np.ndarray): target vector (e.g., target direction)
-        v (np.ndarray): reference vector (e.g., bat heading)
-
-    Returns:
-        float: signed angle in degrees
+    Signed angle (degrees) from v → u.
+    Positive = u is to the left of v, Negative = right.
     """
-    u = np.array([*u, 0])
-    v = np.array([*v, 0])
-
-    angle_rad = np.arctan2(np.linalg.norm(np.cross(u, v)), np.dot(u, v))
-    angle_deg = np.degrees(angle_rad)
-
-    # Determine sign: positive = left, negative = right
-    rot_z = np.cross(v, u)[2]
-    return angle_deg if rot_z >= 0 else -angle_deg
+    u3 = np.append(u, 0)
+    v3 = np.append(v, 0)
+    angle = np.arctan2(np.linalg.norm(np.cross(v3, u3)), np.dot(v3, u3))
+    angle_deg = np.degrees(angle)
+    return angle_deg if np.cross(v3, u3)[2] >= 0 else -angle_deg
 
 
-def find_nearest_target(
-    targets: List[Target],
-    bat_position: np.ndarray,
-    available_indices: List[int]
-) -> int:
+def compute_delays_to_ears(bat: Bat, target_pos: np.ndarray) -> List[float]:
     """
-    Return the index (within available_indices) of the nearest target.
-
-    Args:
-        targets (List[Target]): list of all target objects
-        bat_position (np.ndarray): bat's head (x, y)
-        available_indices (List[int]): indices in 'targets' to consider
-
+    Compute physical delay (distance in meters) from target to each ear.
     Returns:
-        int: index in available_indices corresponding to nearest target
+        List[float]: [delay_to_left, delay_to_right]
+    """
+    left_ear, right_ear = bat.get_ear_positions()
+    return [
+        euclidean_distance(target_pos, left_ear),
+        euclidean_distance(target_pos, right_ear)
+    ]
+
+
+def apply_amplitude_latency_trading(bat: Bat, target_pos: np.ndarray, delays: List[float]) -> List[float]:
+    """
+    Adjust delay values by amplitude-latency trading effect.
+    Returns:
+        List[float]: [adjusted_delay_left, adjusted_delay_right] (in meters)
+    """
+    aim_vector = target_pos - bat.position
+    offset_angle = angle_between_vectors(aim_vector, bat.heading)  # degrees
+
+    # Empirical formula from Chen Ming's MATLAB code
+    trading_offset = 17 / 60 * offset_angle * 11e-6 * 340  # meters
+    return [delays[0] - trading_offset, delays[1] + trading_offset]
+
+
+def estimate_itd_from_histograms(gap_L: List[int], gap_R: List[int], bins: int = 30) -> float:
+    """
+    Estimate interaural time delay (ITD) from histogram peaks in sample space.
+    Returns:
+        float: absolute delay in samples
+    """
+    hL, bin_edges_L = np.histogram(gap_L, bins=bins)
+    hR, bin_edges_R = np.histogram(gap_R, bins=bins)
+    smpl_L = bin_edges_L[np.argmax(hL)]
+    smpl_R = bin_edges_R[np.argmax(hR)]
+    return abs(smpl_R - smpl_L)
+
+
+def choose_speed_from_delay(delay_right: float, sample_rate: float) -> float:
+    """
+    Heuristic for adjusting bat flyspeed based on delay to right ear.
+    Args:
+        delay_right (float): in meters
+        sample_rate (float): samples per second
+    Returns:
+        float: flyspeed in m/s
+    """
+    delay_samples = delay_right / 340 * sample_rate * 2
+    if delay_samples < round(1.5 * 2 / 340 * sample_rate):
+        return 0.2
+    elif delay_samples > round(3.0 * 2 / 340 * sample_rate):
+        return 0.5
+    else:
+        return 0.4
+
+
+def find_nearest_target(targets: List[Target], bat_position: np.ndarray, available_indices: List[int]) -> int:
+    """
+    Find index (from available_indices) of target nearest to bat.
     """
     coords = np.array([
-        [
-            targets[i].r * np.cos(np.radians(targets[i].theta + 90)),
-            targets[i].r * np.sin(np.radians(targets[i].theta + 90))
-        ]
+        polar_to_cartesian(targets[i].r, targets[i].theta)
         for i in available_indices
     ])
-    distances = distances_to_targets(coords, bat_position)
-    nearest_local_index = np.argmin(distances)
-    return available_indices[nearest_local_index]
+    dists = batch_euclidean_distances(coords, bat_position)
+    return available_indices[np.argmin(dists)]
 
