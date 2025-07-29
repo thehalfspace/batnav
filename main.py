@@ -9,7 +9,7 @@ from model.echo_analyzer import linear_separate_window_10thresholds, estimate_gl
 from model.scat_model import run_biscat_main
 from plotting.cochleagram import plot_bmm
 from plotting.filterbank import plot_gammatone_filterbank #, plot_brian2hears_sos_filterbank
-from plotting.trajectory import animate_bat_trajectory
+from plotting.trajectory import animate_bat_trajectory, plot_static_trajectory
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -84,6 +84,9 @@ def run_binaural_tracking():
         wave_params.NoT = 1
         _, first_gap_R = linear_separate_window_10thresholds(wave_params)
 
+        print("First_Gap_L size:", first_gap_L.shape)
+        print("First_Gap_R size:", first_gap_R.shape)
+
         itd_samples = estimate_itd_from_histograms(first_gap_L, first_gap_R)
         print(f"🎧 Estimated ITD: {itd_samples:.1f} samples")
 
@@ -100,11 +103,10 @@ def run_binaural_tracking():
         glint_spacing = estimate_glint_spacing(bat, target, config, wave_params)
         if glint_spacing is None:
             print("❌ Glint spacing estimate failed.")
-            excluded.add(target.index)
+            # excluded.add(target.index)
             continue
 
         glint_estimates.append(glint_spacing)
-        #tarvec.append(target.index)
         print(f"📏 Glint spacing = {glint_spacing:.1f} µs")
 
         if abs(glint_spacing - desired_spacing_us) <= tolerance_us:
@@ -130,7 +132,7 @@ def run_binaural_tracking():
     print("📊 Glint estimates (µs):", glint_estimates)
     print("🎯 Path: ", visited_targets)
 
-    return trajectory_data
+    return trajectory_data, targets
 
     # Plot trajectory
     animate_bat_trajectory(trajectory_data)
@@ -141,6 +143,7 @@ def main():
 
 
 if __name__ == "__main__":
-    td = run_binaural_tracking()
+    td, tar = run_binaural_tracking()
+    plot_static_trajectory(td, tar)
     #main()
 
