@@ -1,6 +1,6 @@
 ---
 
-# 🦇 BatNav: Bat Navigation via Binaural Tracking
+# BatNav: Bat Navigation via Binaural Tracking
 
 **BatNav** is a Python reimplementation of a biologically inspired bat navigation model based on SCAT (Spectrogram Correlation and Transformation). It simulates a bat using binaural hearing to track and locate glint-reflecting targets in a 2D space.
 
