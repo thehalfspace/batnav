@@ -1,8 +1,5 @@
-Here’s a minimal `README.md` tailored for your BatNav project:
-
 ---
 
-````markdown
 # 🦇 BatNav: Bat Navigation via Binaural Tracking
 
 **BatNav** is a Python reimplementation of a biologically inspired bat navigation model based on SCAT (Spectrogram Correlation and Transformation). It simulates a bat using binaural hearing to track and locate glint-reflecting targets in a 2D space.
@@ -24,11 +21,7 @@ cd batnav
 # Install dependencies via pyproject.toml using uv
 uv venv
 uv pip install -e .  # Editable mode
-````
 
-To use `uv` as your Python:
-
-```bash
 source .venv/bin/activate
 ```
 
@@ -48,7 +41,7 @@ Outputs include:
 
 ---
 
-## 🧠 Method Overview
+## 🧠 Overview
 
 * **Signal Generation**: Computes left/right ear delays to target with amplitude-latency trading (ALT).
 * **Filterbank Processing**: Uses `brian2hears` gammatone filters to simulate cochlear response (`bmm`).
