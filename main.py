@@ -69,7 +69,6 @@ def run_binaural_tracking():
             simL = run_biscat_main(config, tsL)
             simR = run_biscat_main(config, tsR)
 
-
             # --- Linear 10-threshold first gap detection
             wave_params.simStruct = simL
             wave_params.NoT = 1

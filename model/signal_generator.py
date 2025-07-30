@@ -124,7 +124,7 @@ def generate_multiglints(delay_m: float, glint_spacing_us: float) -> dict:
     return {
         "data": sig,
         "fs": FS,
-        "delay": delay_m / 2,  # report one-way
+        "delay": delay_m,  # divide by two to report one-way
         "time": time
     }
 

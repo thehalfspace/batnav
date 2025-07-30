@@ -49,6 +49,8 @@ def estimate_glint_spacing(
         n_valid = np.sum(~np.isnan(first_gap))
         print(f"🔍 Threshold {t+1}: valid gaps = {n_valid}")
 
+    breakpoint()
+
     # 5. Check if any threshold has usable data
     valid_cols = np.where(~np.isnan(gap_matrix).all(axis=0))[0]
     print(f"📊 Valid columns in gap matrix: {valid_cols}")
@@ -142,21 +144,18 @@ def linear_separate_window_10thresholds(wave_params: WaveParams) -> Tuple[List[n
     th_type = wave_params.th_type
     th_val = wave_params.startingThPercent
 
-    bmm = sim["coch"]["bmm"]
+    bmm = sim["coch"]["bmm"] # * 2
     Fc = sim["coch"]["Fc"]
     n_channels = bmm.shape[1]
     echo_trace = np.full(n_channels, np.nan)
     all_echo_diffs = []
-
     lp_kernel = design_lowpass_filter(Fs)
 
-    # For the first threshold, overwrite the input interval by setting
-    # higher/wider length of threhsold
     if NoT == 1:
         twi = 1e-3
         twh = 1e-3
 
-    for ch in range(n_channels):
+    for ch in range(n_channels): # range(n_channels):
         signal = bmm[:, ch].copy()
         signal[signal < 0] = 0
         smoothed = apply_lowpass(signal, lp_kernel)
@@ -164,78 +163,85 @@ def linear_separate_window_10thresholds(wave_params: WaveParams) -> Tuple[List[n
         max_val = np.max(smoothed[:sep_samples])
         min_val = np.min(smoothed)
         if max_val - min_val == 0:
-            all_echo_diffs.append(np.array([]))
-            continue
+            print(f"[Ch {ch}] Max == Min, skipping")
+            
+            # Do this for now to match matlab behavior:
+            norm = np.full_like(smoothed, np.nan)
+            
+            # Do this later, skipping the loop is the correct approach
+            # all_echo_diffs.append(np.array([]))
+            #continue
 
+        # norm is equivalent of SM_WF in matlab
         norm = (smoothed - min_val) * 100 / (max_val - min_val)
         norm[norm < 0] = 0
 
         th_start = th_val if th_type == "const" else 10 / (ch + th_val) * np.max(norm)
         thresholds = np.linspace(th_start, 98, NT)
         threshold = thresholds[NoT - 1]
-        
+
         pulse_indices = []
         echo_indices = []
-        
-        # In the process of matching matlab first_gap_L, 
-        # The first one might be too wide for window size
-        # So we use the top one
-        #WL = int(twi * Fs * 0.5)
 
-        if ch > 20:
+        if ch > 0: # 20:
             WL = int((twh if ch > 60 else twi) * Fs)
-			
-            # Find pulse
-            i = 49
-            while i < sep_samples:
-                if smoothed[i] >= threshold:
-                    pulse_indices.append(i)
-                    i += WL
-                else:
-                    i += 1
-            
-            # Find echo
-            gg = np.where(smoothed[sep_samples:] >= threshold)[0]
+            kk = np.where(norm[49:sep_samples] >= threshold)[0]
+            if len(kk) > 0:
+                b = 49 + kk[0]
+                pulse_indices.append(b)
+                # print(f"[Ch {ch}] Pulse start at: {b}")
+                while True:
+                    segment = norm[b + WL : sep_samples]
+                    kk = np.where(segment >= threshold)[0]
+                    if len(kk) == 0:
+                        break
+                    b = b + WL + kk[0]
+                    pulse_indices.append(b)
+                    # print(f"[Ch {ch}] Additional pulse at: {b}")
+
+            gg = np.where(norm[sep_samples:] >= threshold)[0]
             if len(gg) > 0:
                 a = sep_samples + gg[0]
                 echo_indices.append(a)
+                # print(f"[Ch {ch}] First echo at: {a}")
                 while True:
-                    candidates = np.where(smoothed[a + WL : ] >= threshold)[0]
-                    if len(candidates) == 0:
+                    segment = norm[a + WL : ]
+                    gg = np.where(segment >= threshold)[0]
+                    if len(gg) == 0:
                         break
-                    a = a + WL + candidates[0]
+                    a = a + WL + gg[0]
                     echo_indices.append(a)
+                    # print(f"[Ch {ch}] Additional echo at: {a}")
+
         else:
             WL2 = int(twu * Fs)
-            kk = np.where(smoothed[49:] >= threshold)[0]
+            kk = np.where(norm[49:] >= threshold)[0]
             if len(kk) > 0:
                 a = 49 + kk[0]
                 pulse_indices.append(a)
+                # print(f"[Ch {ch}] Pulse (low freq) at: {a}")
                 while True:
-                    candidates = np.where(smoothed[a + WL2 :] >= threshold)[0]
+                    segment = norm[a + WL2:]
+                    candidates = np.where(segment >= threshold)[0]
                     if len(candidates) == 0:
                         break
                     a = a + WL2 + candidates[0]
                     echo_indices.append(a)
-        
-        # Remove echo close to boundary
+                    # print(f"[Ch {ch}] Echo (low freq) at: {a}")
+
         echo_indices = [i for i in echo_indices if abs(i - sep_samples) > 50]
         pulse_indices = [i for i in pulse_indices if i >= 50]
 
-        # Apply amplitude-latency trading shift
-        shift_samples = amp_latency_trading(bmm[:, ch], ref_amp=0.1, alt_coef=ALT_coef, fs=Fs)
-        shift_samples = int(abs(shift_samples)) if shift_samples < 0 else 0
-        echo_indices = [i + shift_samples for i in echo_indices]
-        
-        # Final gap calculation
-        if echo_indices and pulse_indices:
-            diffs = np.array(echo_indices) - pulse_indices[0]
-            print(f"→ Gaps: {diffs}")
-            all_echo_diffs.append(diffs)
-            echo_trace[ch] = echo_indices[0]
+        #>>>>>>>>>>> COME BACK HERE >>>>>>>>>>>>>>>>>>>>
 
+        shift_samples = amp_latency_trading(bmm[:, ch], ref_amp=0.1, alt_coef=ALT_coef, fs=Fs)
+        shift_samples = -np.floor(shift_samples) if shift_samples < 0 else 0
+        shift_samples = int(shift_samples)
+        echo_indices = [i + shift_samples for i in echo_indices]
+        #breakpoint()
+		
+        if echo_indices and pulse_indices:
             if 23 < ch < 28 and len(pulse_indices) == 2 and len(echo_indices) == 1:
-                # Estimate surrounding echo traces 
                 val_l = np.nanmean(echo_trace[:5])
                 val_h = np.nanmean(echo_trace[18:23])
                 if abs(echo_indices[0] - val_l) > abs(echo_indices[0] - val_h):
@@ -246,11 +252,13 @@ def linear_separate_window_10thresholds(wave_params: WaveParams) -> Tuple[List[n
             else:
                 diffs = np.array(echo_indices) - pulse_indices[0]
 
+            echo_trace[ch] = echo_indices[0]
+            all_echo_diffs.append(diffs)
+            # print(f"[Ch {ch}] Final gaps: {diffs}")
         else:
             all_echo_diffs.append(np.array([]))
             echo_trace[ch] = np.nan
-
-        breakpoint()
-
+            print(f"[Ch {ch}] No valid echo/pulse pair found")
+	
     return all_echo_diffs, echo_trace
 
