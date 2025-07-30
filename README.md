@@ -67,9 +67,8 @@ batnav/
 
 ## 🧪 Status
 
-🔧 WIP
-🔧 Debugging echo/glint mismatches
-🎞️ Animation in progress
+- 🔧 WIP
+- 🔧 Debugging echo/glint mismatches
 
 
 

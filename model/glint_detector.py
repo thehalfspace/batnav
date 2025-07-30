@@ -2,6 +2,7 @@
 
 import numpy as np
 from typing import Optional
+from scipy.stats import mode
 
 
 def findnotches2(d: np.ndarray, threshold_index: int) -> Optional[np.ndarray]:
@@ -37,7 +38,7 @@ def findnotches2(d: np.ndarray, threshold_index: int) -> Optional[np.ndarray]:
     # Optional: remove phantom notches (very close together)
     if len(ipL) >= 2:
         diffs = np.diff(ipL)
-        mode_spacing = np.median(diffs)
+        mode_spacing = mode(diffs, keepdims=False).mode
         ipL = ipL[diffs >= 0.5 * mode_spacing]
 
     return ipL if len(ipL) > 0 else None

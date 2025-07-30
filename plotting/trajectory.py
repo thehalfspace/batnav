@@ -39,7 +39,7 @@ def plot_static_trajectory(trajectory_data: dict, targets: list = None):
         v = headings[i]
 
         ax.arrow(p[0], p[1], v[0]*0.2, v[1]*0.2,
-                 head_width=0.02, head_length=0.05, fc='red', ec='red')
+                 head_width=0.05, head_length=0.05, fc='red', ec='red')
 
         if i < len(glint_spacing):
             ax.text(p[0]+0.05, p[1]+0.05, f"{glint_spacing[i]:.0f} µs", color='green', fontsize=7)

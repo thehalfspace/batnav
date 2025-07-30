@@ -102,6 +102,23 @@ def choose_speed_from_delay(delay_right: float, sample_rate: float) -> float:
     else:
         return 0.4
 
+def choose_rotation_step(itd_samples: float) -> int:
+    """
+    Choose bat head rotation step size based on interaural time difference (ITD).
+    
+    Args:
+        itd_samples (float): estimated ITD in samples
+    
+    Returns:
+        int: rotation step in degrees
+    """
+    if itd_samples > 150:
+        return 20  # target is behind the bat
+    elif itd_samples < 80:
+        return 10  # target is in front
+    else:
+        return 15  # somewhere intermediate
+
 
 def find_nearest_target(targets: List[Target], bat_position: np.ndarray, available_indices: List[int]) -> int:
     """

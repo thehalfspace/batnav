@@ -14,10 +14,6 @@ from plotting.trajectory import animate_bat_trajectory, plot_static_trajectory
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Reload modules for debugging: Can drop later
-import importlib
-#importlib.reload(generate_sigs_with_delay)
-#importlib.reload(generate_multiglints)
 
 def run_binaural_tracking():
     # Load config and scenario
@@ -30,16 +26,18 @@ def run_binaural_tracking():
     bat = Bat()
     desired_spacing_us = 100
     tolerance_us = 10
-    max_steps = config.binaural.max_iterations
+    ITD_THRESHOLD = 20 # Samples
+    glint_spacing = desired_spacing_us + 100 # initial value, must be wrong number
+    max_steps = 8 # config.binaural.max_iterations
 
     visited_targets = []
     excluded = set()
     glint_estimates = []
-    tarvec = []
     vec_all = []
     coordear_all = []
 
-    for step in range(15): #max_steps):
+    # while abs(glint_spacing - desired_spacing_us) > tolerance_us:
+    for step in range(max_steps):
         print(f"\n🚩 Step {step+1}")
 
         available = [t.index for t in targets if t.index not in excluded]
@@ -55,54 +53,61 @@ def run_binaural_tracking():
         visited_targets.append(target.index)
 
         target_pos = polar_to_cartesian(target.r, target.theta)
-        raw_delays = compute_delays_to_ears(bat, target_pos)
-        alt_delays = apply_amplitude_latency_trading(bat, target_pos, raw_delays)
 
-        # --- Generate echo signal
-        ts = generate_sigs_with_delay(alt_delays)
-        tsL = {"fs": sample_rate, "data": ts["data"][:, 0]}
-        tsR = {"fs": sample_rate, "data": ts["data"][:, 1]}
+        # --- Rotate head until ITD (sense delay) is aligned ---
+        while True:
+            # Calculate delays
+            raw_delays = compute_delays_to_ears(bat, target_pos)
+            alt_delays = apply_amplitude_latency_trading(bat, target_pos, raw_delays)
 
-        # --- Run SCAT filterbank
-        simL = run_biscat_main(config, tsL)
-        simR = run_biscat_main(config, tsR)
+            # --- Generate echo signal
+            ts = generate_sigs_with_delay(alt_delays)
+            tsL = {"fs": sample_rate, "data": ts["data"][:, 0]}
+            tsR = {"fs": sample_rate, "data": ts["data"][:, 1]}
 
-        # plot_bmm(simL["coch"]["bmm"], simL["coch"]["Fc"], sample_rate, title=f"BMM (Basilar Membrane Motion) for Target {target.index} (Left Ear)")
-        # plot_brian2hears_sos_filterbank(simL["coch"]["gfb"], fs=sample_rate)
+            # --- Run SCAT filterbank
+            simL = run_biscat_main(config, tsL)
+            simR = run_biscat_main(config, tsR)
 
 
+            # --- Linear 10-threshold first gap detection
+            wave_params.simStruct = simL
+            wave_params.NoT = 1
+            _, first_gap_L = linear_separate_window_10thresholds(wave_params)
 
-        print(f"🧪 BMM shape L: {simL['coch']['bmm'].shape}")
-        print(f"🧪 Fc range: {simL['coch']['Fc'][0]:.1f} - {simL['coch']['Fc'][-1]:.1f} Hz")
+            wave_params.simStruct = simR
+            wave_params.NoT = 1
+            _, first_gap_R = linear_separate_window_10thresholds(wave_params)
 
-        # --- Linear 10-threshold detection
-        wave_params.simStruct = simL
-        wave_params.NoT = 1
-        _, first_gap_L = linear_separate_window_10thresholds(wave_params)
+            # ITD estimate
+            itd_samples = estimate_itd_from_histograms(first_gap_L, first_gap_R)
+            print(f"🎧 Estimated ITD: {itd_samples:.1f} samples")
 
-        wave_params.simStruct = simR
-        wave_params.NoT = 1
-        _, first_gap_R = linear_separate_window_10thresholds(wave_params)
+            # If aligned, break out of inner loop
+            if abs(itd_samples) < ITD_THRESHOLD:
+                print("Bat head is aligned: ")
+                break
 
-        print("First_Gap_L size:", first_gap_L.shape)
-        print("First_Gap_R size:", first_gap_R.shape)
+            # Else rotate and move
 
-        itd_samples = estimate_itd_from_histograms(first_gap_L, first_gap_R)
-        print(f"🎧 Estimated ITD: {itd_samples:.1f} samples")
+            # --- Movement logic
+            rot_step = choose_rotation_step(itd_samples) # Choose how much to rotate
+            direction = np.sign(alt_delays[0] - alt_delays[1]) 
+            bat.rotate_head(direction * rot_step)
+            bat.speed = choose_speed_from_delay(alt_delays[1], sample_rate)
+            bat.move_forward()
 
-        # --- Movement logic
-        bat.rotate_head(np.sign(alt_delays[0] - alt_delays[1]) * 15)
-        bat.speed = choose_speed_from_delay(alt_delays[1], sample_rate)
-        bat.move_forward()
+            # Log outputs
+            vec_all.append(bat.heading.copy())
+            earL, earR = bat.get_ear_positions()
+            coordear_all.append(np.concatenate([earL, earR]))
+            #tarvec.append(target.index)
 
-        vec_all.append(bat.heading.copy())
-        earL, earR = bat.get_ear_positions()
-        coordear_all.append(np.concatenate([earL, earR]))
-
-        # --- Glint spacing estimation
+        # --- Glint spacing estimation (after alignment) ---
         glint_spacing = estimate_glint_spacing(bat, target, config, wave_params)
         if glint_spacing is None:
             print("❌ Glint spacing estimate failed.")
+            #breakpoint()
             # excluded.add(target.index)
             continue
 
@@ -145,5 +150,7 @@ def main():
 if __name__ == "__main__":
     td, tar = run_binaural_tracking()
     plot_static_trajectory(td, tar)
+    # plot_bmm(simL["coch"]["bmm"], simL["coch"]["Fc"], sample_rate, title=f"BMM (Basilar Membrane Motion) for Target {target.index} (Left Ear)")
+    # plot_brian2hears_sos_filterbank(simL["coch"]["gfb"], fs=sample_rate)
     #main()
 
