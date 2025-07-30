@@ -28,7 +28,7 @@ def run_binaural_tracking():
     tolerance_us = 10
     ITD_THRESHOLD = 20 # Samples
     glint_spacing = desired_spacing_us + 100 # initial value, must be wrong number
-    max_steps = 8 # config.binaural.max_iterations
+    max_steps = 100 # config.binaural.max_iterations
 
     visited_targets = []
     excluded = set()

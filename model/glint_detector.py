@@ -39,7 +39,14 @@ def findnotches2(d: np.ndarray, threshold_index: int) -> Optional[np.ndarray]:
     if len(ipL) >= 2:
         diffs = np.diff(ipL)
         mode_spacing = mode(diffs, keepdims=False).mode
-        ipL = ipL[diffs >= 0.5 * mode_spacing]
+        print("mode spacing", mode_spacing)
+        print("diffs", diffs)
+        print("ipL", ipL)
+        
+        # Drop ipL[i] where spacing to next notch is too small
+        too_close = np.where(diffs < 0.5 * mode_spacing)[0]
+        ipL = np.delete(ipL, too_close)
+        # ipL = ipL[diffs >= 0.5 * mode_spacing]
 
     return ipL if len(ipL) > 0 else None
 

@@ -78,7 +78,7 @@ def generate_sigs_with_delay(delay_m_list: List[float]) -> dict:
     return {
         "data": data,
         "fs": FS,
-        "delay": [d / 2 for d in delay_m_list],
+        "delay": delay_m_list, # [d / 2 for d in delay_m_list],
         "time": time
     }
 
@@ -124,7 +124,7 @@ def generate_multiglints(delay_m: float, glint_spacing_us: float) -> dict:
     return {
         "data": sig,
         "fs": FS,
-        "delay": delay_m,  # divide by two to report one-way
+        "delay": delay_m / 2,  # divide by two to report one-way
         "time": time
     }
 

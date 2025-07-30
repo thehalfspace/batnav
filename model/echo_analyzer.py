@@ -49,26 +49,27 @@ def estimate_glint_spacing(
         n_valid = np.sum(~np.isnan(first_gap))
         print(f"🔍 Threshold {t+1}: valid gaps = {n_valid}")
 
-    breakpoint()
+    
+    # Editing point 5 and 6: is incorrect below
+    # 5. Select the first threshold column that has at least some NaNs (i.e., spectral notches)
+    num_channels = gap_matrix.shape[0]
+    partial_nan_cols = [
+        i for i in range(gap_matrix.shape[1])
+        if 0 < np.sum(np.isnan(gap_matrix[:, i])) < num_channels
+    ]
 
-    # 5. Check if any threshold has usable data
-    valid_cols = np.where(~np.isnan(gap_matrix).all(axis=0))[0]
-    print(f"📊 Valid columns in gap matrix: {valid_cols}")
-    if len(valid_cols) == 0:
-        print("❌ All thresholds are NaN — returning None")
+    if not partial_nan_cols:
+        print("❌ No partial NaN columns found — returning None")
         return None
 
-    # 6. Find notches from best threshold column
-    selected_col = valid_cols[0]
+    selected_col = partial_nan_cols[0]
+    print(f"📊 Selected threshold column: {selected_col}")
     notches = findnotches2(gap_matrix, selected_col)
     print(f"🎯 Notches from threshold {selected_col+1}: {notches}")
     
-    if notches is None or len(notches) < 2:
-        print("❌ Not enough notches found — returning None")
-        return None
+    # breakpoint()
 
-
-    # 7. Compute glint spacing from notch frequency intervals
+    # 6. Compute glint spacing from notch frequency intervals
     notch_freqs = Fc[notches]
     deltas = np.diff(np.sort(notch_freqs))
     print(f"📐 Notch frequencies (Hz): {notch_freqs}")
@@ -78,7 +79,7 @@ def estimate_glint_spacing(
         print("❌ No frequency deltas — returning None")
         return None
 
-    # 8. Estimate dominant spacing via histogram
+    # 7. Estimate dominant spacing via histogram
     hist, edges = np.histogram(deltas, bins=30)
     peak_bin = np.argmax(hist)
     spacing_Hz = (edges[peak_bin] + edges[peak_bin + 1]) / 2
@@ -232,8 +233,6 @@ def linear_separate_window_10thresholds(wave_params: WaveParams) -> Tuple[List[n
         echo_indices = [i for i in echo_indices if abs(i - sep_samples) > 50]
         pulse_indices = [i for i in pulse_indices if i >= 50]
 
-        #>>>>>>>>>>> COME BACK HERE >>>>>>>>>>>>>>>>>>>>
-
         shift_samples = amp_latency_trading(bmm[:, ch], ref_amp=0.1, alt_coef=ALT_coef, fs=Fs)
         shift_samples = -np.floor(shift_samples) if shift_samples < 0 else 0
         shift_samples = int(shift_samples)
@@ -258,7 +257,7 @@ def linear_separate_window_10thresholds(wave_params: WaveParams) -> Tuple[List[n
         else:
             all_echo_diffs.append(np.array([]))
             echo_trace[ch] = np.nan
-            print(f"[Ch {ch}] No valid echo/pulse pair found")
+            #print(f"[Ch {ch}] No valid echo/pulse pair found")
 	
     return all_echo_diffs, echo_trace
 
