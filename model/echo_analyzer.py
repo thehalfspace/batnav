@@ -47,7 +47,7 @@ def estimate_glint_spacing(
         _, first_gap = linear_separate_window_10thresholds(wave_params)
         gap_matrix[:, t] = first_gap
         n_valid = np.sum(~np.isnan(first_gap))
-        print(f"🔍 Threshold {t+1}: valid gaps = {n_valid}")
+        # print(f"🔍 Threshold {t+1}: valid gaps = {n_valid}")
 
     
     # Editing point 5 and 6: is incorrect below
@@ -67,8 +67,6 @@ def estimate_glint_spacing(
     notches = findnotches2(gap_matrix, selected_col)
     print(f"🎯 Notches from threshold {selected_col+1}: {notches}")
     
-    # breakpoint()
-
     # 6. Compute glint spacing from notch frequency intervals
     notch_freqs = Fc[notches]
     deltas = np.diff(np.sort(notch_freqs))

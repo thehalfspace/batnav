@@ -9,7 +9,7 @@ from model.echo_analyzer import linear_separate_window_10thresholds, estimate_gl
 from model.scat_model import run_biscat_main
 from plotting.cochleagram import plot_bmm
 from plotting.filterbank import plot_gammatone_filterbank #, plot_brian2hears_sos_filterbank
-from plotting.trajectory import animate_bat_trajectory, plot_static_trajectory
+from plotting.trajectory import plot_static_trajectory
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -28,7 +28,7 @@ def run_binaural_tracking():
     tolerance_us = 10
     ITD_THRESHOLD = 20 # Samples
     glint_spacing = desired_spacing_us + 100 # initial value, must be wrong number
-    max_steps = 100 # config.binaural.max_iterations
+    max_steps = 50 # config.binaural.max_iterations
 
     visited_targets = []
     excluded = set()
@@ -36,8 +36,9 @@ def run_binaural_tracking():
     vec_all = []
     coordear_all = []
 
-    # while abs(glint_spacing - desired_spacing_us) > tolerance_us:
-    for step in range(max_steps):
+    #for step in range(max_steps):
+    step = 0
+    while abs(glint_spacing - desired_spacing_us) > tolerance_us:
         print(f"\n🚩 Step {step+1}")
 
         available = [t.index for t in targets if t.index not in excluded]
@@ -106,8 +107,9 @@ def run_binaural_tracking():
         glint_spacing = estimate_glint_spacing(bat, target, config, wave_params)
         if glint_spacing is None:
             print("❌ Glint spacing estimate failed.")
+            glint_spacing = desired_spacing_us + 100 # Assign wrong value 
             #breakpoint()
-            # excluded.add(target.index)
+            excluded.add(target.index)
             continue
 
         glint_estimates.append(glint_spacing)
