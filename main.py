@@ -34,7 +34,6 @@ def run_binaural_tracking():
     excluded = set()
     glint_estimates = []
     vec_all = []
-    # coordear_all = []
 
     #for step in range(max_steps):
     step = 0
@@ -102,7 +101,6 @@ def run_binaural_tracking():
             # Log outputs
             vec_all.append(bat.heading.copy())
             earL, earR = bat.get_ear_positions()
-            #coordear_all.append(np.concatenate([earL, earR]))
 
         # --- Get dechirped response ---
         # Calculate delays

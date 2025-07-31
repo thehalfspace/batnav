@@ -7,7 +7,7 @@ from model.utils import polar_to_cartesian, euclidean_distance
 from model.scat_model import run_biscat_main
 from typing import Optional
 from typing import List, Tuple
-from scipy.signal import firwin, lfilter, hilbert, find_peaks
+from scipy.signal import firwin, remez, lfilter, hilbert, find_peaks, filtfilt
 from model.wave_params import WaveParams
 
 
@@ -129,6 +129,23 @@ def amp_latency_trading(waveform: np.ndarray, ref_amp: float, alt_coef: float, f
     time_us = delta_db * alt_coef
     return time_us * 1e-6 * fs
 
+def remez_lowpass_fir(fs: int = 500_000, fp: int = 10_000, order: int = 30) -> np.ndarray:
+    """
+    Design a lowpass FIR filter matching MATLAB dsp.LowpassFilter.
+    """
+    nyq = fs / 2
+    transition_width = 1000  # 1 kHz transition band
+    bands = [0, fp, fp + transition_width, nyq]
+    desired = [1, 0]
+    weight = [1, 10]  # Favor sharp transition and strong stopband attenuation
+
+    return remez(order + 1, bands, desired, weight=weight, fs=fs)
+
+def apply_zero_phase_lowpass(signal: np.ndarray, kernel: np.ndarray) -> np.ndarray:
+    """
+    Apply zero-phase FIR lowpass filter (like MATLAB) using filtfilt.
+    """
+    return filtfilt(kernel, [1.0], signal)
 
 def linear_separate_window_10thresholds(wave_params: WaveParams) -> Tuple[List[np.ndarray], np.ndarray]:
     sim = wave_params.simStruct
@@ -148,7 +165,16 @@ def linear_separate_window_10thresholds(wave_params: WaveParams) -> Tuple[List[n
     n_channels = bmm.shape[1]
     echo_trace = np.full(n_channels, np.nan)
     all_echo_diffs = []
-    lp_kernel = design_lowpass_filter(Fs)
+    #lp_kernel = design_lowpass_filter(Fs)
+
+    # Normalize kernel to match matlab
+    order = 30
+    lp_kernel = firwin(order + 1, cutoff=10_000, fs=Fs)
+    lp_kernel /= np.sum(lp_kernel)
+
+    # new filter
+    remez_kernel = remez_lowpass_fir(Fs)
+    remez_kernel /= np.sum(remez_kernel)
 
     if NoT == 1:
         twi = 1e-3
@@ -157,10 +183,15 @@ def linear_separate_window_10thresholds(wave_params: WaveParams) -> Tuple[List[n
     for ch in range(n_channels): # range(n_channels):
         signal = bmm[:, ch].copy()
         signal[signal < 0] = 0
-        smoothed = apply_lowpass(signal, lp_kernel)
+        
+        # New filter
+        #smoothed = apply_lowpass(signal, lp_kernel)
+        #smoothed = apply_zero_phase_lowpass(signal, remez_kernel)
+        smoothed = signal
 
         max_val = np.max(smoothed[:sep_samples])
         min_val = np.min(smoothed)
+        breakpoint()
         if max_val - min_val == 0:
             print(f"[Ch {ch}] Max == Min, skipping")
             
