@@ -191,7 +191,7 @@ def linear_separate_window_10thresholds(wave_params: WaveParams) -> Tuple[List[n
 
         max_val = np.max(smoothed[:sep_samples])
         min_val = np.min(smoothed)
-        breakpoint()
+        # breakpoint()
         if max_val - min_val == 0:
             print(f"[Ch {ch}] Max == Min, skipping")
             

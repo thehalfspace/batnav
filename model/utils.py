@@ -1,7 +1,7 @@
 # model/utils.py
 
 import numpy as np
-from typing import List
+from typing import List, Union
 from model.target import Target
 from model.bat import Bat
 
@@ -72,16 +72,24 @@ def apply_amplitude_latency_trading(bat: Bat, target_pos: np.ndarray, delays: Li
     return [delays[0] - trading_offset, delays[1] + trading_offset]
 
 
-def estimate_itd_from_histograms(gap_L: List[int], gap_R: List[int], bins: int = 30) -> float:
+def estimate_itd_from_histograms(gap_L: List[int], gap_R: List[int], bins: Union[int, str] = 'auto') -> float:
     """
     Estimate interaural time delay (ITD) from histogram peaks in sample space.
     Returns:
         float: absolute delay in samples
     """
+    if len(gap_L) == 0 or len(gap_R) == 0:
+        print('Gaps in L and R ears are too small, bins can not be estimated')
+        return float('nan')
+
+    print("GapL: ", len(gap_L))
+    print("GapR: ", len(gap_R))
+
     hL, bin_edges_L = np.histogram(gap_L, bins=bins)
     hR, bin_edges_R = np.histogram(gap_R, bins=bins)
     smpl_L = bin_edges_L[np.argmax(hL)]
     smpl_R = bin_edges_R[np.argmax(hR)]
+    
     return abs(smpl_R - smpl_L)
 
 

@@ -79,6 +79,8 @@ def run_binaural_tracking():
             wave_params.NoT = 1
             _, first_gap_R = linear_separate_window_10thresholds(wave_params)
 
+            # breakpoint()
+
             # ITD estimate
             itd_samples = estimate_itd_from_histograms(first_gap_L, first_gap_R)
             print(f"🎧 Estimated ITD: {itd_samples:.1f} samples")
