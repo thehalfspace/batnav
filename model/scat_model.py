@@ -2,14 +2,13 @@
 
 import numpy as np
 from brian2 import Hz
-from brian2hears import Sound, Gammatone
+from brian2hears import Sound, Gammatone, Filterbank, erbspace
 from typing import Dict
-
+import matplotlib.pyplot as plt
 
 def run_biscat_main(config, ts: Dict) -> Dict:
     """
-    Cochlear filterbank simulation using brian2hears Gammatone filters.
-
+    Run SCAT model using gammatone filterbank
     Args:
         config: parsed config object
         ts (dict): {'data': np.ndarray, 'fs': int}
@@ -19,39 +18,60 @@ def run_biscat_main(config, ts: Dict) -> Dict:
             'bmm': basilar membrane motion [time x channel]
             'Fc': center frequencies (Hz)
     """
-    x = ts["data"]
-    fs = ts["fs"]
+    x = ts['data']
+    fs = ts['fs']
 
     # Ensure mono input
     if x.ndim == 2:
         x = x.mean(axis=1)
-
-    # Wrap in Sound object
-    sound = Sound(x, samplerate=fs * Hz)
-
-    # Center frequencies (log-spaced or linear based on config)
+    
     fmin = config.binaural.coch_fmin
     fmax = config.binaural.coch_fmax
-    n_filters = config.binaural.coch_steps
+    n_channels = config.binaural.coch_steps
     spacing_mode = config.binaural.coch_fcenter
 
-    if spacing_mode == 1:  # linear
-        Fc = np.linspace(fmin, fmax, n_filters)
-    else:  # log spacing (default)
-        Fc = np.logspace(np.log10(fmin), np.log10(fmax), n_filters)
+    # Run the gammatone filterbank
+    # Create a Sound object from the input data.
+    sound = Sound(x, samplerate=fs * Hz)
 
-    # Create gammatone filterbank
-    gfb = Gammatone(sound, cf=Fc * Hz)  # cf = center_frequencies
+    # Center frequencies
+    if config.binaural.coch_fcenter == 1:
+        desired_bandwidth = config.binaural.coch_bw
+        Fc = np.linspace(fmin, fmax, n_channels)
+        erb_at_cf = 24.7 + 0.108 * Fc
+        b_factor = desired_bandwidth / erb_at_cf
+        # Create the Gammatone filterbank.
+        gammatone_filterbank = Gammatone(sound, cf=Fc * Hz, b = b_factor)
+    else:
+        Fc = erbspace(fmin * Hz, fmax * Hz, n_channels)
+        # Create the Gammatone filterbank.
+        gammatone_filterbank = Gammatone(sound, cf=Fc)
+    
+   
+    # Apply the filterbank to the sound data.
+    cochlear_bmm = gammatone_filterbank.process()
 
-    # Run processing
-    bmm = gfb.process()
-    bmm_np = np.asarray(bmm)  # shape: [time, channel]
-
+    #plot_filtbank(cochlear_bmm.T)
+    #breakpoint()
+    
     return {
         "coch": {
-            "bmm": bmm_np,
+            "bmm": np.asarray(cochlear_bmm),
             "Fc": Fc,
-            "gfb": gfb,
         }
     }
+
+
+def plot_filtbank(bmm):
+    """
+    Plot the gammatone filterbank output
+    """
+    plt.figure(figsize=(10, 6))
+    plt.imshow(bmm, aspect='auto', origin='lower') #, 
+    #           extent=[0, duration, 0, num_channels])
+    plt.xlabel('Time (s)')
+    plt.ylabel('Cochlear Channel')
+    plt.title('Simulated Basilar Membrane Movement (Gammatone)')
+    plt.colorbar(label='Amplitude')
+    plt.show()
 

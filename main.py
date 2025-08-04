@@ -7,8 +7,6 @@ from model.wave_params import WaveParams
 from model.utils import *
 from model.echo_analyzer import linear_separate_window_10thresholds, estimate_glint_spacing
 from model.scat_model import run_biscat_main
-from plotting.cochleagram import plot_bmm
-from plotting.filterbank import plot_gammatone_filterbank #, plot_brian2hears_sos_filterbank
 from plotting.trajectory import plot_static_trajectory
 
 import numpy as np
@@ -128,6 +126,8 @@ def run_binaural_tracking():
         itd_samples = estimate_itd_from_histograms(first_gap_L, first_gap_R)
 
         # --- Glint spacing estimation (after alignment) ---
+        print("Target: ", target.tin)
+        # breakpoint()
         glint_spacing = estimate_glint_spacing(bat, target, config, wave_params)
         if glint_spacing is None:
             print("❌ Glint spacing estimate failed.")
@@ -176,7 +176,4 @@ def main():
 if __name__ == "__main__":
     td, tar = run_binaural_tracking()
     plot_static_trajectory(td, tar)
-    # plot_bmm(simL["coch"]["bmm"], simL["coch"]["Fc"], sample_rate, title=f"BMM (Basilar Membrane Motion) for Target {target.index} (Left Ear)")
-    # plot_brian2hears_sos_filterbank(simL["coch"]["gfb"], fs=sample_rate)
-    #main()
 

@@ -10,8 +10,6 @@ from typing import List, Tuple
 from scipy.signal import firwin, remez, lfilter, hilbert, find_peaks, filtfilt
 from model.wave_params import WaveParams
 
-
-
 def estimate_glint_spacing(
     bat,
     target,
@@ -185,9 +183,9 @@ def linear_separate_window_10thresholds(wave_params: WaveParams) -> Tuple[List[n
         signal[signal < 0] = 0
         
         # New filter
-        #smoothed = apply_lowpass(signal, lp_kernel)
+        smoothed = apply_lowpass(signal, lp_kernel)
         #smoothed = apply_zero_phase_lowpass(signal, remez_kernel)
-        smoothed = signal
+        #smoothed = signal
 
         max_val = np.max(smoothed[:sep_samples])
         min_val = np.min(smoothed)
@@ -199,8 +197,8 @@ def linear_separate_window_10thresholds(wave_params: WaveParams) -> Tuple[List[n
             norm = np.full_like(smoothed, np.nan)
             
             # Do this later, skipping the loop is the correct approach
-            # all_echo_diffs.append(np.array([]))
-            #continue
+            all_echo_diffs.append(np.array([]))
+            continue
 
         # norm is equivalent of SM_WF in matlab
         norm = (smoothed - min_val) * 100 / (max_val - min_val)
