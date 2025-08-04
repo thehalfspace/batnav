@@ -27,6 +27,7 @@ class Bat:
     angle_history: List[float] = field(default_factory=list)
     speed_history: List[float] = field(default_factory=list)
     ear_history: List[Tuple[np.ndarray, np.ndarray]] = field(default_factory=list)
+    heading_history: List[np.ndarray] = field(default_factory=list)
 
     def __post_init__(self):
         self.log_state()
@@ -57,6 +58,7 @@ class Bat:
         self.angle_history.append(self.angle_deg)
         self.speed_history.append(self.speed)
         self.ear_history.append(self.get_ear_positions())
+        self.heading_history.append(self.heading.copy())
 
     def reset(self):
         """Reset bat to origin."""
@@ -67,5 +69,6 @@ class Bat:
         self.angle_history.clear()
         self.speed_history.clear()
         self.ear_history.clear()
+        self.heading_history.clear()
         self.log_state()
 

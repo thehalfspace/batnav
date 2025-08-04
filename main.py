@@ -31,7 +31,6 @@ def run_binaural_tracking():
     visited_targets = []
     excluded = set()
     glint_estimates = []
-    vec_all = []
 
     #for step in range(max_steps):
     step = 0
@@ -77,8 +76,6 @@ def run_binaural_tracking():
             wave_params.NoT = 1
             _, first_gap_R = linear_separate_window_10thresholds(wave_params)
 
-            # breakpoint()
-
             # ITD estimate
             itd_samples = estimate_itd_from_histograms(first_gap_L, first_gap_R)
             print(f"🎧 Estimated ITD: {itd_samples:.1f} samples")
@@ -97,10 +94,6 @@ def run_binaural_tracking():
             bat.speed = choose_speed_from_delay(alt_delays[1], sample_rate)
             bat.move_forward()
             print("Bat Position: ", bat.position)
-
-            # Log outputs
-            vec_all.append(bat.heading.copy())
-            earL, earR = bat.get_ear_positions()
 
         # --- Get dechirped response ---
         # Calculate delays
@@ -132,7 +125,6 @@ def run_binaural_tracking():
         if glint_spacing is None:
             print("❌ Glint spacing estimate failed.")
             glint_spacing = desired_spacing_us + 100 # Assign wrong value 
-            #breakpoint()
             #excluded.add(target.index)
             #continue
 
@@ -149,24 +141,20 @@ def run_binaural_tracking():
     # --- Bundle data for animation ---
     trajectory_data = {
             "position": bat.path_history,
-            "heading": vec_all,
+            "heading": bat.heading_history,
             "ears": bat.ear_history,
             "angles": bat.angle_history,
             "visited": visited_targets,
             "glint_spacing": glint_estimates,
             }
 
-    earL, earR = bat.get_ear_positions()
     print("\n📍 Final position:", bat.position)
-    print("🧭 Headings:", vec_all[-1])
-    print("🦇 Ears:", [earL, earR])
+    print("🧭 Headings:", bat.heading_history[-1])
+    print("🦇 Ears:", bat.get_ear_positions())
     print("📊 Glint estimates (µs):", glint_estimates)
     print("🎯 Path: ", visited_targets)
 
     return trajectory_data, targets
-
-    # Plot trajectory
-    animate_bat_trajectory(trajectory_data)
 
 
 def main():
