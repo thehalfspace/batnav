@@ -2,10 +2,51 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-
+import polars as pl
 from model.utils import polar_to_cartesian
+import os
 
-def plot_static_trajectory(trajectory_data: dict, targets: list = None):
+def plot_bat_steps(trajectory_data: dict, output_dir: str = "data"):
+    """
+    Plot the number of steps it took to rotate bat head and move
+    """
+    angles = np.array(trajectory_data["angles"])
+    step_log = trajectory_data["step_log"]
+
+    indices = [entry["index"] for entry in step_log]
+    iterations = [entry["iteration"] for entry in step_log]
+
+    # --- Plot Bat Rotation Angle over Time ---
+    fig1, ax1 = plt.subplots()
+    ax1.plot(indices, angles[indices], marker='o', linestyle='-', color='teal')
+    ax1.set_xlabel("Steps")
+    ax1.set_ylabel("Rotation Angle (deg)")
+    ax1.set_title("Bat Rotation Angle History")
+    ax1.grid(True)
+    plt.tight_layout()
+    fig1.savefig(os.path.join(output_dir, "rotation_angle_history.png"), dpi=300)
+    plt.close(fig1)
+
+    # --- Plot Steps Taken per Target Attempt ---
+    df = pl.DataFrame(step_log)
+    step_counts = df.group_by("iteration").len()
+    total_steps = len(angles)
+
+    fig2, ax2 = plt.subplots()
+    ax2.bar(step_counts["iteration"], step_counts["len"], color='teal')
+    ax2.set_xlabel("Target index")
+    ax2.set_ylabel("Number of Steps to Align")
+    ax2.set_title(f"Steps per Target Attempt. Total Steps: {total_steps}")
+    ax2.grid(axis='y')
+    plt.tight_layout()
+    fig2.savefig(os.path.join(output_dir, "steps_per_target.png"), dpi=300)
+    plt.close(fig2)
+
+    print(f"Trajectory plots saved in {output_dir}")
+
+
+
+def plot_static_trajectory(trajectory_data: dict, targets: list = None, output_dir: str = 'data'):
     """
     Plot static trajectory of the bat and overlay target positions.
 
@@ -62,9 +103,10 @@ def plot_static_trajectory(trajectory_data: dict, targets: list = None):
         for t in targets:
             x, y = polar_to_cartesian(t.r, t.theta)
             ax.scatter(x, y, s=60, facecolors='none', edgecolors='navy', linewidths=1.2)
-            ax.text(x, y + 0.3, f"T{t.index}", ha='center', color='navy', fontsize=6)
+            ax.text(x, y + 0.3, f"T{t.index + 1}", ha='center', color='navy', fontsize=6)
 
     ax.legend()
     plt.tight_layout()
+    fig.savefig(os.path.join(output_dir, 'bat_trajectory.png'), dpi=300)
     plt.show()
 

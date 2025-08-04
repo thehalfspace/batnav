@@ -1,5 +1,5 @@
 # main.py
-from config_loader import load_config, load_scenarios
+from config_loader import load_config, load_scenarios, SCENARIO_PATH
 from model.bat import Bat
 from model.target import Target
 from model.signal_generator import generate_sigs_with_delay, generate_multiglints
@@ -7,11 +7,20 @@ from model.wave_params import WaveParams
 from model.utils import *
 from model.echo_analyzer import linear_separate_window_10thresholds, estimate_glint_spacing
 from model.scat_model import run_biscat_main
-from plotting.trajectory import plot_static_trajectory
+from plotting.trajectory import * #plot_static_trajectory, plot_bat_steps
+from plotting.glint_spacing import *
+from pathlib import Path
 
 import numpy as np
 import matplotlib.pyplot as plt
 
+def create_output_dirs():
+    folder_name = SCENARIO_PATH.stem
+    output_path = Path.cwd() / Path('data/') / folder_name
+
+    output_path.mkdir(parents=True, exist_ok=True)
+    print(f"Created Output directory {output_path}")
+    return output_path
 
 def run_binaural_tracking():
     # Load config and scenario
@@ -32,6 +41,7 @@ def run_binaural_tracking():
     excluded = set()
     glint_estimates = []
     milestones = [] # Track the iterations: index, target_idx, success (glint estimation)
+    step_log = []   # Log bat steps: index, target_idx, iteration
 
     #for step in range(max_steps):
     step = 0
@@ -97,6 +107,13 @@ def run_binaural_tracking():
             bat.move_forward()
             print("Bat Position: ", bat.position)
 
+            # Log steps
+            step_log.append({
+                'index': len(bat.path_history) - 1, # Index in path history after movement
+                'target_idx': target.index,         # Current target index
+                'iteration': step                   # Current outer loop step
+                })
+
         # --- Get dechirped response ---
         # Calculate delays
         raw_delays = compute_delays_to_ears(bat, target_pos)
@@ -157,6 +174,7 @@ def run_binaural_tracking():
             "visited": visited_targets,
             "glint_spacing": glint_estimates,
             "milestones": milestones,
+            "step_log": step_log,
             }
 
     print("\n📍 Final position:", bat.position)
@@ -173,6 +191,9 @@ def main():
 
 
 if __name__ == "__main__":
+    output_path = create_output_dirs()
     td, tar = run_binaural_tracking()
-    plot_static_trajectory(td, tar)
+    plot_static_trajectory(td, tar, output_path)
+    plot_bat_steps(td, output_path)
+    plot_glint_spacing_estimates(td, tar, output_path)
 
