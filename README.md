@@ -3,14 +3,14 @@
 
 **BatNav** is a Python reimplementation of a biologically inspired bat navigation model based on SCAT (Spectrogram Correlation and Transformation). It simulates a bat using binaural hearing to track and locate glint-reflecting targets in a 2D space.
 
-> 🧬 *Adapted from the original MATLAB SCAT implementation:*  
+> *Adapted from the original MATLAB SCAT implementation:*  
 > https://github.com/gomingchen/SCAT
 
 ---
 
-## 📦 Installation (Python ≥ 3.10)
+## Installation (Python ≥ 3.10)
 
-We use [uv](https://github.com/astral-sh/uv) for fast, lockfile-based installs:
+We use [uv](https://github.com/astral-sh/uv) as a Package Manager:
 
 ```bash
 # Clone the repository
@@ -26,7 +26,7 @@ source .venv/bin/activate
 
 ---
 
-## 🚀 Running the Simulation
+## Running the Simulation
 
 ```bash
 python main.py
@@ -34,15 +34,15 @@ python main.py
 
 Outputs include:
 
-* Console logs of tracking steps and glint spacing estimates
-* Static trajectory plot with visited targets and ear positions
+* Logs of bat position history
+* Static trajectory plot with visited targets
 * Animation of bat movement (WIP)
 
 ---
 
-## 🧠 Overview
+## Overview
 
-* **Signal Generation**: Computes left/right ear delays to target with amplitude-latency trading (ALT).
+* **Signal Generation**: Computes left/right ear delays to target.
 * **Filterbank Processing**: Uses `brian2hears` gammatone filters to simulate cochlear response (`bmm`).
 * **Thresholding**: Detects echo onsets using a 10-threshold linear separation method with smoothing.
 * **ITD Estimation**: Estimates interaural time difference (ITD) from histograms of glint gaps.
@@ -51,7 +51,7 @@ Outputs include:
 
 ---
 
-## 📁 Project Structure
+## Directory Structure
 
 ```
 batnav/
@@ -65,11 +65,7 @@ batnav/
 
 ---
 
-## 🧪 Status
+## Status
 
 - 🔧 WIP
 - 🔧 Debugging echo/glint mismatches
-
-
-
-

@@ -10,6 +10,7 @@ from model.scat_model import run_biscat_main
 from plotting.trajectory import * #plot_static_trajectory, plot_bat_steps
 from plotting.glint_spacing import *
 from pathlib import Path
+from model.simdata_io import *
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -193,6 +194,7 @@ def main():
 if __name__ == "__main__":
     output_path = create_output_dirs()
     td, tar = run_binaural_tracking()
+    save_simulation_data(td, tar, output_path)
     plot_static_trajectory(td, tar, output_path)
     plot_bat_steps(td, output_path)
     plot_glint_spacing_estimates(td, tar, output_path)
