@@ -31,9 +31,11 @@ def run_binaural_tracking():
     visited_targets = []
     excluded = set()
     glint_estimates = []
+    milestones = [] # Track the iterations: index, target_idx, success (glint estimation)
 
     #for step in range(max_steps):
     step = 0
+    
     while abs(glint_spacing - desired_spacing_us) > tolerance_us:
         print(f"\n🚩 Step {step+1}")
         step += 1
@@ -122,11 +124,19 @@ def run_binaural_tracking():
         print("Target: ", target.tin)
         # breakpoint()
         glint_spacing = estimate_glint_spacing(bat, target, config, wave_params)
+
         if glint_spacing is None:
             print("❌ Glint spacing estimate failed.")
             glint_spacing = desired_spacing_us + 100 # Assign wrong value 
             #excluded.add(target.index)
             #continue
+        
+        # Track milestone
+        milestones.append({
+            'index': len(bat.path_history) - 1, # Current step index
+            'target_idx': target.index,
+            'success': abs(glint_spacing - desired_spacing_us) <= tolerance_us
+            })
 
         glint_estimates.append(glint_spacing)
         print(f"📏 Glint spacing = {glint_spacing:.1f} µs")
@@ -146,6 +156,7 @@ def run_binaural_tracking():
             "angles": bat.angle_history,
             "visited": visited_targets,
             "glint_spacing": glint_estimates,
+            "milestones": milestones,
             }
 
     print("\n📍 Final position:", bat.position)

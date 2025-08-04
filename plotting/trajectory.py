@@ -16,6 +16,7 @@ def plot_static_trajectory(trajectory_data: dict, targets: list = None):
     pos = np.array(trajectory_data["position"])
     headings = np.array(trajectory_data["heading"])
     visited = trajectory_data.get("visited", [])
+    milestones = trajectory_data.get("milestones", [])
 
     fig, ax = plt.subplots()
     ax.set_aspect('equal')
@@ -35,11 +36,26 @@ def plot_static_trajectory(trajectory_data: dict, targets: list = None):
                  head_width=0.05, head_length=0.05, fc='red', ec='red')
 
         # If this step hit a target (i.e., head aligned), draw dotted line to that target
-        if i < len(visited) and targets:
-            target = next((t for t in targets if t.index == visited[i]), None)
-            if target:
-                tx, ty = polar_to_cartesian(target.r, target.theta)
-                ax.plot([p[0], tx], [p[1], ty], 'g--', lw=0.8, alpha=0.7)
+        #if i < len(visited) and targets:
+        #    target = next((t for t in targets if t.index == visited[i]), None)
+        #    if target:
+        #        tx, ty = polar_to_cartesian(target.r, target.theta)
+        #        ax.plot([p[0], tx], [p[1], ty], 'g--', lw=0.8, alpha=0.7)
+
+        # When bat estimates glint spacing
+        for m in milestones:
+            idx = m["index"]
+            target_idx = m["target_idx"]
+            success = m["success"]
+            
+            if idx < len(pos):
+                p = pos[idx]
+                target = next((t for t in targets if t.index == target_idx), None)
+                if target:
+                    tx, ty = polar_to_cartesian(target.r, target.theta)
+                    color = 'limegreen' if success else 'orange'
+                    ax.plot([p[0], tx], [p[1], ty], '--', lw=1.0, alpha=0.8, color=color)
+
 
     # --- Plot targets as hollow circles with labels
     if targets:
