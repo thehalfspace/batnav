@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from model.target import Target
 
 CONFIG_PATH = Path("config/config.yaml")
-SCENARIO_PATH = Path("config/scenarios/uniform_10.csv")
+SCENARIO_PATH = Path("config/scenarios/ring_wide.csv")
 
 
 # ---------- Config Dataclasses ----------
