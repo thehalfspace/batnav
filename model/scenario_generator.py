@@ -30,7 +30,7 @@ class ScenarioGenerator:
             config: Configuration for scenario bounds and parameters
         """
         self.config = config or ScenarioConfig()
-        self.output_dir = Path("config")
+        self.output_dir = Path("config/scenarios")
         self.output_dir.mkdir(exist_ok=True)
     
     def _cartesian_to_polar(self, x: float, y: float) -> Tuple[float, float]:
@@ -60,8 +60,8 @@ class ScenarioGenerator:
             Modified array with at least one target glint spacing
         """
         if len(glint_spacings) > 0:
-            # Replace first target with desired glint spacing
-            glint_spacings[0] = self.config.target_glint
+            # Replace last target with desired glint spacing
+            glint_spacings[-1] = self.config.target_glint
         return glint_spacings
     
     def generate_uniform_scenario(self, n_targets: int, name: str) -> pl.DataFrame:
