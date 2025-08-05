@@ -14,6 +14,8 @@ from model.simdata_io import *
 
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
+import logging
 
 def create_output_dirs():
     folder_name = SCENARIO_PATH.stem
@@ -23,7 +25,36 @@ def create_output_dirs():
     print(f"Created Output directory {output_path}")
     return output_path
 
+def setup_logging(output_path):
+    """Setup logging to redirect print statements to output.log file."""
+    log_file = output_path / "output.log"
+    
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(message)s',
+        handlers=[
+            logging.FileHandler(log_file, mode='w'),
+            logging.StreamHandler(sys.stdout)  # Also print to console
+        ]
+    )
+    
+    # Redirect print statements to logging
+    class LogPrint:
+        def write(self, text):
+            if text.strip():  # Only log non-empty strings
+                logging.info(text.strip())
+        def flush(self):
+            pass
+    
+    sys.stdout = LogPrint()
+    print(f"Logging setup complete. Output will be saved to {log_file}")
+
 def run_binaural_tracking():
+    # Create output directory and setup logging
+    output_path = create_output_dirs()
+    setup_logging(output_path)
+    
     # Load config and scenario
     config = load_config()
     targets = load_scenarios()
@@ -46,8 +77,10 @@ def run_binaural_tracking():
 
     #for step in range(max_steps):
     step = 0
+    max_iteration = 0
+    max_iteration_limit = 1000
     
-    while abs(glint_spacing - desired_spacing_us) > tolerance_us:
+    while abs(glint_spacing - desired_spacing_us) > tolerance_us and max_iteration < max_iteration_limit:
         print(f"\n🚩 Step {step+1}")
         step += 1
 
@@ -66,7 +99,7 @@ def run_binaural_tracking():
         target_pos = polar_to_cartesian(target.r, target.theta)
 
         # --- Rotate head until ITD (sense delay) is aligned ---
-        while True: # abs(itd_samples)> ITD_THRESHOLD:
+        while True and max_iteration < max_iteration_limit: # abs(itd_samples)> ITD_THRESHOLD:
             # Calculate delays
             raw_delays = compute_delays_to_ears(bat, target_pos)
             alt_delays = apply_amplitude_latency_trading(bat, target_pos, raw_delays)
@@ -106,6 +139,8 @@ def run_binaural_tracking():
             bat.rotate_head(direction * rot_step)
             bat.speed = choose_speed_from_delay(alt_delays[1], sample_rate)
             bat.move_forward()
+            max_iteration += 1
+            #max_iteration = len(bat.path_history)
             print("Bat Position: ", bat.position)
 
             # Log steps
@@ -140,7 +175,6 @@ def run_binaural_tracking():
 
         # --- Glint spacing estimation (after alignment) ---
         print("Target: ", target.tin)
-        # breakpoint()
         glint_spacing = estimate_glint_spacing(bat, target, config, wave_params)
 
         if glint_spacing is None:
@@ -184,7 +218,7 @@ def run_binaural_tracking():
     print("📊 Glint estimates (µs):", glint_estimates)
     print("🎯 Path: ", visited_targets)
 
-    return trajectory_data, targets
+    return trajectory_data, targets, output_path
 
 
 def main():
@@ -192,8 +226,7 @@ def main():
 
 
 if __name__ == "__main__":
-    output_path = create_output_dirs()
-    td, tar = run_binaural_tracking()
+    td, tar, output_path = run_binaural_tracking()
     save_simulation_data(td, tar, output_path)
     plot_static_trajectory(td, tar, output_path)
     animate_bat_trajectory(td, tar, output_path)

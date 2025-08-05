@@ -82,11 +82,21 @@ def estimate_itd_from_histograms(gap_L: List[int], gap_R: List[int], bins: Union
         print('Gaps in L and R ears are too small, bins can not be estimated')
         return float('nan')
 
-    print("GapL: ", len(gap_L))
-    print("GapR: ", len(gap_R))
+    # Filter out NaN and infinite values
+    gap_L_clean = np.array(gap_L)
+    gap_R_clean = np.array(gap_R)
+    gap_L_clean = gap_L_clean[np.isfinite(gap_L_clean)]
+    gap_R_clean = gap_R_clean[np.isfinite(gap_R_clean)]
+    
+    if len(gap_L_clean) == 0 or len(gap_R_clean) == 0:
+        print('No valid (finite) gap values found after filtering NaN/inf')
+        return float('nan')
 
-    hL, bin_edges_L = np.histogram(gap_L, bins=bins)
-    hR, bin_edges_R = np.histogram(gap_R, bins=bins)
+    print("GapL: ", len(gap_L_clean))
+    print("GapR: ", len(gap_R_clean))
+
+    hL, bin_edges_L = np.histogram(gap_L_clean, bins=bins)
+    hR, bin_edges_R = np.histogram(gap_R_clean, bins=bins)
     smpl_L = bin_edges_L[np.argmax(hL)]
     smpl_R = bin_edges_R[np.argmax(hR)]
     
