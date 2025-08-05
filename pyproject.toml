@@ -13,7 +13,8 @@ dependencies = [
     "fastapi",
     "uvicorn",
     "ipython",
-    "brian2hears"
+    "brian2hears",
+    "ffmpeg>=1.4",
 ]
 
 [tool.ruff]

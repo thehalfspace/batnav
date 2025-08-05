@@ -6,6 +6,78 @@ import polars as pl
 from model.utils import polar_to_cartesian
 import os
 
+import matplotlib.animation as animation
+
+def animate_bat_trajectory(trajectory_data: dict, targets: list = None, output_dir: str = 'data'):
+    """
+    Animate bat's trajectory, headings, and milestones.
+
+    Parameters:
+        trajectory_data (dict): Dict with keys: position, heading, milestones.
+        targets (list of Target): Optional list of Target objects with .r, .theta, .index
+        output_dir (str): Directory to save the animation.
+    """
+    pos = np.array(trajectory_data["position"])
+    headings = np.array(trajectory_data["heading"])
+    milestones = trajectory_data.get("milestones", [])
+
+    fig, ax = plt.subplots()
+    ax.set_aspect('equal')
+    ax.set_title("Bat Trajectory Animation")
+    ax.set_xlabel("X (m)")
+    ax.set_ylabel("Y (m)")
+
+    # Plot targets as static elements
+    if targets:
+        for t in targets:
+            x, y = polar_to_cartesian(t.r, t.theta)
+            ax.scatter(x, y, s=60, facecolors='none', edgecolors='navy', linewidths=1.2)
+            ax.text(x, y + 0.3, f"T{t.index + 1}", ha='center', color='navy', fontsize=6)
+
+    # Plot elements to update
+    path_line, = ax.plot([], [], 'k:', lw=1, label="Bat Path")
+    bat_dot = ax.scatter([], [], s=30, color='black', alpha=0.8)
+    heading_arrow = ax.arrow(0, 0, 0, 0, head_width=0.05, head_length=0.05, fc='red', ec='red')
+    milestone_lines = []
+
+    def init():
+        path_line.set_data([], [])
+        bat_dot.set_offsets(np.empty((0,2)))
+        return path_line, bat_dot
+
+    def update(frame):
+        # Update path
+        path_line.set_data(pos[:frame+1, 0], pos[:frame+1, 1])
+        # Update bat position
+        bat_dot.set_offsets(pos[frame])
+        # Remove old arrow and draw new heading
+        v = headings[frame]
+        ax.arrow(pos[frame, 0], pos[frame, 1], v[0]*0.2, v[1]*0.2,
+                 head_width=0.05, head_length=0.05, fc='red', ec='red')
+
+        # Check if this frame is a milestone
+        for m in milestones:
+            if m['index'] == frame:
+                target_idx = m['target_idx']
+                success = m['success']
+                target = next((t for t in targets if t.index == target_idx), None)
+                if target:
+                    tx, ty = polar_to_cartesian(target.r, target.theta)
+                    color = 'limegreen' if success else 'orange'
+                    line = ax.plot([pos[frame, 0], tx], [pos[frame, 1], ty], '--', lw=1.0, alpha=0.8, color=color)[0]
+                    milestone_lines.append(line)
+
+        return path_line, bat_dot, *milestone_lines
+
+    ani = animation.FuncAnimation(fig, update, frames=len(pos), init_func=init,
+                                  interval=300, blit=False, repeat=False)
+
+    save_path = os.path.join(output_dir, "bat_trajectory_animation.mp4")
+    ani.save(save_path, writer='ffmpeg', fps=4, dpi=200)
+    print(f"Animation saved to {save_path}")
+    plt.show()
+
+
 def plot_bat_steps(trajectory_data: dict, output_dir: str = "data"):
     """
     Plot the number of steps it took to rotate bat head and move
@@ -75,13 +147,6 @@ def plot_static_trajectory(trajectory_data: dict, targets: list = None, output_d
         v = headings[i]
         ax.arrow(p[0], p[1], v[0]*0.2, v[1]*0.2,
                  head_width=0.05, head_length=0.05, fc='red', ec='red')
-
-        # If this step hit a target (i.e., head aligned), draw dotted line to that target
-        #if i < len(visited) and targets:
-        #    target = next((t for t in targets if t.index == visited[i]), None)
-        #    if target:
-        #        tx, ty = polar_to_cartesian(target.r, target.theta)
-        #        ax.plot([p[0], tx], [p[1], ty], 'g--', lw=0.8, alpha=0.7)
 
         # When bat estimates glint spacing
         for m in milestones:

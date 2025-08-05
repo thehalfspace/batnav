@@ -7,7 +7,7 @@ from model.wave_params import WaveParams
 from model.utils import *
 from model.echo_analyzer import linear_separate_window_10thresholds, estimate_glint_spacing
 from model.scat_model import run_biscat_main
-from plotting.trajectory import * #plot_static_trajectory, plot_bat_steps
+from plotting.trajectory import *
 from plotting.glint_spacing import *
 from pathlib import Path
 from model.simdata_io import *
@@ -196,6 +196,7 @@ if __name__ == "__main__":
     td, tar = run_binaural_tracking()
     save_simulation_data(td, tar, output_path)
     plot_static_trajectory(td, tar, output_path)
+    animate_bat_trajectory(td, tar, output_path)
     plot_bat_steps(td, output_path)
     plot_glint_spacing_estimates(td, tar, output_path)
 

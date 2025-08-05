@@ -34,5 +34,5 @@ def plot_glint_spacing_estimates(trajectory_data: dict, tars: list = None,
 
     plt.tight_layout()
     fig.savefig(os.path.join(output_dir, "glint_spacings.png"), dpi=300)
-    plt.show()
+    #plt.show()
 
