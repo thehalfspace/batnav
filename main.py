@@ -178,7 +178,7 @@ def run_binaural_tracking(scenario_filename=None):
         itd_samples = estimate_itd_from_histograms(first_gap_L, first_gap_R)
 
         # --- Glint spacing estimation (after alignment) ---
-        print("Target: ", target.tin)
+        print("Target true glint spacing: ", target.tin)
         glint_spacing = estimate_glint_spacing(bat, target, config, wave_params)
 
         if glint_spacing is None:
@@ -198,10 +198,10 @@ def run_binaural_tracking(scenario_filename=None):
         print(f"📏 Glint spacing = {glint_spacing:.1f} µs")
 
         if abs(glint_spacing - desired_spacing_us) <= tolerance_us:
-            print(f"✅ Target {target.index} matched spacing goal.")
+            print(f"✅ Target {target.index + 1} matched spacing goal.")
             break
         else:
-            print(f"❌ Target {target.index} spacing off by {abs(glint_spacing - desired_spacing_us):.1f} µs.")
+            print(f"❌ Target {target.index + 1} spacing off by {abs(glint_spacing - desired_spacing_us):.1f} µs.")
             excluded.add(target.index)
 
     # --- Bundle data for animation ---
