@@ -101,6 +101,40 @@ def run_binaural_tracking(scenario_filename=None):
         visited_targets.append(target.index)
 
         target_pos = polar_to_cartesian(target.r, target.theta)
+        
+        # --- Get dechirped response ---
+        # Calculate delays
+        #raw_delays = compute_delays_to_ears(bat, target_pos)
+        #alt_delays = apply_amplitude_latency_trading(bat, target_pos, raw_delays)
+
+        #ts = generate_sigs_with_delay(alt_delays)
+        #tsL = {"fs": sample_rate, "data": ts["data"][:, 0]}
+        #tsR = {"fs": sample_rate, "data": ts["data"][:, 1]}
+
+        #simL = run_biscat_main(config, tsL)
+        #simR = run_biscat_main(config, tsR)
+
+        #wave_params.simStruct = simL
+        #wave_params.NoT = 1
+        #_, first_gap_L = linear_separate_window_10thresholds(wave_params)
+
+        #wave_params.simStruct = simR
+        #wave_params.NoT = 1
+        #_, first_gap_R = linear_separate_window_10thresholds(wave_params)
+
+        # ITD initial estimate
+        #itd_samples = estimate_itd_from_histograms(first_gap_L, first_gap_R)
+        
+        # --- Movement logic
+        #rot_step = choose_rotation_step(itd_samples) # Choose how much to rotate
+        #direction = np.sign(alt_delays[0] - alt_delays[1]) 
+        #bat.rotate_head(direction * rot_step)
+        #bat.speed = choose_speed_from_delay(alt_delays[1], sample_rate)
+        #bat.move_forward()
+        #max_iteration += 1
+        #max_iteration = len(bat.path_history)
+        #print("Bat Position: ", bat.position)
+
 
         # --- Rotate head until ITD (sense delay) is aligned ---
         while True and max_iteration < max_iteration_limit: # abs(itd_samples)> ITD_THRESHOLD:
@@ -154,29 +188,6 @@ def run_binaural_tracking(scenario_filename=None):
                 'iteration': step                   # Current outer loop step
                 })
 
-        # --- Get dechirped response ---
-        # Calculate delays
-        raw_delays = compute_delays_to_ears(bat, target_pos)
-        alt_delays = apply_amplitude_latency_trading(bat, target_pos, raw_delays)
-
-        ts = generate_sigs_with_delay(alt_delays)
-        tsL = {"fs": sample_rate, "data": ts["data"][:, 0]}
-        tsR = {"fs": sample_rate, "data": ts["data"][:, 1]}
-
-        simL = run_biscat_main(config, tsL)
-        simR = run_biscat_main(config, tsR)
-
-        wave_params.simStruct = simL
-        wave_params.NoT = 1
-        _, first_gap_L = linear_separate_window_10thresholds(wave_params)
-
-        wave_params.simStruct = simR
-        wave_params.NoT = 1
-        _, first_gap_R = linear_separate_window_10thresholds(wave_params)
-
-        # ITD initial estimate
-        itd_samples = estimate_itd_from_histograms(first_gap_L, first_gap_R)
-
         # --- Glint spacing estimation (after alignment) ---
         print("Target true glint spacing: ", target.tin)
         glint_spacing = estimate_glint_spacing(bat, target, config, wave_params)
@@ -184,7 +195,6 @@ def run_binaural_tracking(scenario_filename=None):
         if glint_spacing is None:
             print("❌ Glint spacing estimate failed.")
             glint_spacing = desired_spacing_us + 100 # Assign wrong value 
-            #excluded.add(target.index)
             #continue
         
         # Track milestone
