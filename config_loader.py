@@ -8,8 +8,7 @@ from pydantic import BaseModel, Field
 from model.target import Target
 
 CONFIG_PATH = Path("config/config.yaml")
-SCENARIO_PATH = Path("config/scenarios/ring_wide.csv")
-
+SCENARIO_PATH = Path("config/scenarios/Scenario0.csv")
 
 # ---------- Config Dataclasses ----------
 
@@ -94,7 +93,11 @@ def load_config(path: Path = CONFIG_PATH) -> Config:
     return Config(**raw)
 
 
-def load_scenarios(path: Path = SCENARIO_PATH) -> List[Target]:
+def load_scenarios(scenario_filename: str = None) -> List[Target]:
+    if scenario_filename:
+        path = Path("config/scenarios") / scenario_filename
+    else:
+        path = SCENARIO_PATH
     df = pl.read_csv(path)
 
     # Clean column names

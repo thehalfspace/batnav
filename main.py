@@ -1,4 +1,5 @@
 # main.py
+import argparse
 from config_loader import load_config, load_scenarios, SCENARIO_PATH
 from model.bat import Bat
 from model.target import Target
@@ -17,8 +18,11 @@ import matplotlib.pyplot as plt
 import sys
 import logging
 
-def create_output_dirs():
-    folder_name = SCENARIO_PATH.stem
+def create_output_dirs(scenario_filename=None):
+    if scenario_filename:
+        folder_name = Path(scenario_filename).stem
+    else:
+        folder_name = SCENARIO_PATH.stem
     output_path = Path.cwd() / Path('data/') / folder_name
 
     output_path.mkdir(parents=True, exist_ok=True)
@@ -50,14 +54,14 @@ def setup_logging(output_path):
     sys.stdout = LogPrint()
     print(f"Logging setup complete. Output will be saved to {log_file}")
 
-def run_binaural_tracking():
+def run_binaural_tracking(scenario_filename=None):
     # Create output directory and setup logging
-    output_path = create_output_dirs()
+    output_path = create_output_dirs(scenario_filename)
     setup_logging(output_path)
     
     # Load config and scenario
     config = load_config()
-    targets = load_scenarios()
+    targets = load_scenarios(scenario_filename)
     wave_params = WaveParams()
     sample_rate = wave_params.Fs
 
@@ -222,14 +226,23 @@ def run_binaural_tracking():
 
 
 def main():
-    return 0
-
-
-if __name__ == "__main__":
-    td, tar, output_path = run_binaural_tracking()
+    parser = argparse.ArgumentParser(description='Run bat navigation simulation')
+    parser.add_argument('scenario', nargs='?', default=None, 
+                       help='Scenario filename (e.g., Scenario1.csv). If not provided, uses default Scenario0.csv')
+    
+    args = parser.parse_args()
+    
+    #output_path = create_output_dirs(args.scenario)
+    td, tar, output_path = run_binaural_tracking(args.scenario)
     save_simulation_data(td, tar, output_path)
     plot_static_trajectory(td, tar, output_path)
     animate_bat_trajectory(td, tar, output_path)
     plot_bat_steps(td, output_path)
     plot_glint_spacing_estimates(td, tar, output_path)
+    
+    return 0
+
+
+if __name__ == "__main__":
+    main()
 
